@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+"""
+A script to install and start an SSH daemon in a Docker image, enabling the
+user to log on to it.
+"""
+
+import argparse
+import os
+import re
+import subprocess
+
+def format_args(args, *items):
+    """
+    Format each item with values taken from parsed arguments.
+    """
+    return [item.format(**args.__dict__) for item in items]
+
+def main():
+    """
+    Run the container with SSH set up.
+    """
+
+    parser = argparse.ArgumentParser(
+        description="Install and start an SSH daemon in a Docker image,"
+                    "enabling the user to log on to it."
+    )
+    parser.add_argument('image', metavar='IMAGE')
+    parser.add_argument('-u', '--user', dest='user', default='app',
+                        help="The user to enable logging in as")
+    default_identity = (subprocess
+                        .check_output(['ssh-add', '-L'])
+                        .decode()
+                        .strip())
+    parser.add_argument('-i', '--identity', dest='identity',
+                        default=default_identity,
+                        help="The SSH key to add")
+    args = parser.parse_args()
+
+    commands = '&&'.join(format_args(
+        args,
+        'apt-get -qq install ssh',
+        'invoke-rc.d ssh stop',
+        ('echo \'AuthorizedKeysFile /etc/ssh/%u/authorized_keys\' >' +
+            ' /etc/ssh/sshd_config'),
+        'mkdir -p /etc/ssh/{user}',
+        'echo \'{identity}\' > /etc/ssh/{user}/authorized_keys',
+        'chsh -s /bin/bash {user}',
+        'usermod -p zzz {user}',
+        '/usr/sbin/sshd -D',
+    ))
+    container_args = format_args(
+        args,
+        'docker', 'run',
+        '-d',
+        '-P', '-p', '22',
+        '-v', '{cwd}:/app'.format(cwd=os.getcwd()),
+        '--entrypoint=/bin/bash',
+        '-u=root',
+        '{image}',
+        '-c',
+        commands,
+    )
+    container = subprocess.check_output(container_args).strip()
+    ssh_addr = subprocess.check_output([
+        'docker',
+        'port',
+        container,
+        '22',
+    ]).decode()
+    ssh_port = re.match(r'.+:(\d+)$', ssh_addr).group(1)
+    ssh_command = format_args(
+        args,
+        'ssh',
+        '{user}@localhost',
+        '-p',
+        ssh_port,
+    )
+    for _ in range(1, 10):
+        try:
+            subprocess.check_call(ssh_command + ['true'])
+            print(' '.join(ssh_command))
+            return
+        except subprocess.CalledProcessError:
+            pass
+        import time
+        time.sleep(1)
+
+if __name__ == '__main__':
+    main()
