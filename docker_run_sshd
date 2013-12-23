@@ -21,7 +21,7 @@ def main():
     """
 
     parser = argparse.ArgumentParser(
-        description="Install and start an SSH daemon in a Docker image,"
+        description="Install and start an SSH daemon in a Docker image, "
                     "enabling the user to log on to it."
     )
     parser.add_argument('image', metavar='IMAGE')
