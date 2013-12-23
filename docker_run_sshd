@@ -102,6 +102,8 @@ class Main(object):
             subprocess.check_call(['sudo', 'mount', '-o', 'bind',
                                 rootfs_path,
                                 mount_root])
+            print("Container filesystem mounted on {mount_root}".format(
+                mount_root))
 
 
     def print_ssh_details(self):
