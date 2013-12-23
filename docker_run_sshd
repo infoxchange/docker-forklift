@@ -5,8 +5,8 @@ user to log on to it.
 """
 
 import argparse
+import json
 import os
-import re
 import subprocess
 
 def format_args(args, *items):
@@ -34,18 +34,26 @@ def main():
     parser.add_argument('-i', '--identity', dest='identity',
                         default=default_identity,
                         help="The SSH key to add")
+    parser.add_argument('--host-uid',
+                        default=os.getuid(),
+                        help="The UID to change the user to")
+    parser.add_argument('--mount-root',
+                        help="The directory to mount the container root "
+                             "on the host")
     args = parser.parse_args()
 
     commands = '&&'.join(format_args(
         args,
         'DEBIAN_FRONTEND=noninteractive apt-get -qq install ssh',
         'invoke-rc.d ssh stop',
-        ('echo \'AuthorizedKeysFile /etc/ssh/%u/authorized_keys\' >' +
-            ' /etc/ssh/sshd_config'),
+        ('echo \'AuthorizedKeysFile /etc/ssh/%u/authorized_keys\' > ' +
+            '/etc/ssh/sshd_config'),
         'mkdir -p /etc/ssh/{user}',
         'echo \'{identity}\' > /etc/ssh/{user}/authorized_keys',
         'chsh -s /bin/bash {user}',
         'usermod -p zzz {user}',
+        'chown -R --from={user} {host_uid} /app',
+        'usermod -u {host_uid} {user}',
         '/usr/sbin/sshd -D',
     ))
     container_args = format_args(
@@ -53,7 +61,6 @@ def main():
         'docker', 'run',
         '-d',
         '-P', '-p', '22',
-        '-v', '{cwd}:/app'.format(cwd=os.getcwd()),
         '--entrypoint=/bin/bash',
         '-u=root',
         '{image}',
@@ -61,13 +68,24 @@ def main():
         commands,
     )
     container = subprocess.check_output(container_args).strip()
-    ssh_addr = subprocess.check_output([
-        'docker',
-        'port',
-        container,
-        '22',
-    ]).decode()
-    ssh_port = re.match(r'.+:(\d+)$', ssh_addr).group(1)
+    container_details = json.loads(
+        subprocess.check_output(['docker', 'inspect', container]).decode())[0]
+
+    # If requested, mount the working directory
+    if 'mount_root' in args:
+        subprocess.call(['sudo', 'umount', args.mount_root],
+                        stderr=subprocess.DEVNULL)
+        subprocess.check_call(['mkdir', '-p', args.mount_root])
+        rootfs_path = '/var/lib/docker/{driver}/mnt/{container}/rootfs'.format(
+            driver=container_details['Driver'],
+            container=container.decode(),
+        )
+        subprocess.check_call(['sudo', 'mount', '-o', 'bind',
+                               rootfs_path,
+                               args.mount_root])
+
+    ssh_port = container_details['HostConfig']['PortBindings']\
+        ['22/tcp'][0]['HostPort']
     ssh_command = format_args(
         args,
         'ssh',
