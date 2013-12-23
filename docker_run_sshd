@@ -38,7 +38,7 @@ class Main(object):
                             help="The UID to change the user to")
         parser.add_argument('--mount-root',
                             help="The directory to mount the container root "
-                                "on the host")
+                                "on the host (requires sudo)")
         self.args = parser.parse_args()
         self.container = None
         self.container_details = None
