@@ -38,7 +38,7 @@ def main():
 
     commands = '&&'.join(format_args(
         args,
-        'apt-get -qq install ssh',
+        'DEBIAN_FRONTEND=noninteractive apt-get -qq install ssh',
         'invoke-rc.d ssh stop',
         ('echo \'AuthorizedKeysFile /etc/ssh/%u/authorized_keys\' >' +
             ' /etc/ssh/sshd_config'),
