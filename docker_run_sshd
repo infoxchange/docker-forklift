@@ -8,107 +8,139 @@ import argparse
 import json
 import os
 import subprocess
+import time
 
-def format_args(args, *items):
+class Main(object):
     """
-    Format each item with values taken from parsed arguments.
-    """
-    return [item.format(**args.__dict__) for item in items]
-
-def main():
-    """
-    Run the container with SSH set up.
+    The main class.
     """
 
-    parser = argparse.ArgumentParser(
-        description="Install and start an SSH daemon in a Docker image, "
-                    "enabling the user to log on to it."
-    )
-    parser.add_argument('image', metavar='IMAGE')
-    parser.add_argument('-u', '--user', dest='user', default='app',
-                        help="The user to enable logging in as")
-    default_identity = (subprocess
-                        .check_output(['ssh-add', '-L'])
-                        .decode()
-                        .strip())
-    parser.add_argument('-i', '--identity', dest='identity',
-                        default=default_identity,
-                        help="The SSH key to add")
-    parser.add_argument('--host-uid',
-                        default=os.getuid(),
-                        help="The UID to change the user to")
-    parser.add_argument('--mount-root',
-                        help="The directory to mount the container root "
-                             "on the host")
-    args = parser.parse_args()
-
-    commands = '&&'.join(format_args(
-        args,
-        'DEBIAN_FRONTEND=noninteractive apt-get -qq install ssh',
-        'invoke-rc.d ssh stop',
-        ('echo \'AuthorizedKeysFile /etc/ssh/%u/authorized_keys\' > ' +
-            '/etc/ssh/sshd_config'),
-        'mkdir -p /etc/ssh/{user}',
-        'echo \'{identity}\' > /etc/ssh/{user}/authorized_keys',
-        'chsh -s /bin/bash {user}',
-        'usermod -p zzz {user}',
-        'chown -R --from={user} {host_uid} /app',
-        'usermod -u {host_uid} {user}',
-        '/usr/sbin/sshd -D',
-    ))
-    container_args = format_args(
-        args,
-        'docker', 'run',
-        '-d',
-        '-P', '-p', '22',
-        '--entrypoint=/bin/bash',
-        '-u=root',
-        '{image}',
-        '-c',
-        commands,
-    )
-    container = subprocess.check_output(container_args).strip()
-    container_details = json.loads(
-        subprocess.check_output(['docker', 'inspect', container]).decode())[0]
-
-    # If requested, mount the working directory
-    if 'mount_root' in args:
-        subprocess.call(['sudo', 'umount', args.mount_root],
-                        stderr=subprocess.DEVNULL)
-        subprocess.check_call(['mkdir', '-p', args.mount_root])
-        rootfs_path = '/var/lib/docker/{driver}/mnt/{container}/rootfs'.format(
-            driver=container_details['Driver'],
-            container=container.decode(),
+    def __init__(self):
+        """
+        Parse the command line and set up the class.
+        """
+        parser = argparse.ArgumentParser(
+            description="Install and start an SSH daemon in a Docker image, "
+                        "enabling the user to log on to it."
         )
-        subprocess.check_call(['sudo', 'mount', '-o', 'bind',
-                               rootfs_path,
-                               args.mount_root])
+        parser.add_argument('image', metavar='IMAGE')
+        parser.add_argument('-u', '--user', dest='user', default='app',
+                            help="The user to enable logging in as")
+        default_identity = (subprocess
+                            .check_output(['ssh-add', '-L'])
+                            .decode()
+                            .strip())
+        parser.add_argument('-i', '--identity', dest='identity',
+                            default=default_identity,
+                            help="The SSH key to add")
+        parser.add_argument('--host-uid',
+                            default=os.getuid(),
+                            help="The UID to change the user to")
+        parser.add_argument('--mount-root',
+                            help="The directory to mount the container root "
+                                "on the host")
+        self.args = parser.parse_args()
+        self.container = None
+        self.container_details = None
 
-    ssh_port = container_details['HostConfig']['PortBindings']\
-        ['22/tcp'][0]['HostPort']
-    ssh_command = format_args(
-        args,
-        'ssh',
-        '{user}@localhost',
-        '-p',
-        ssh_port,
-    )
-    for _ in range(1, 10):
-        try:
-            subprocess.check_call(
-                ssh_command + ['-o', 'StrictHostKeyChecking=no',
-                               '-o', 'PasswordAuthentication=no',
-                               'true'],
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            print(' '.join(ssh_command))
-            return
-        except subprocess.CalledProcessError:
-            pass
-        import time
-        time.sleep(1)
+    def format_args(self, *items):
+        """
+        Format each item with values taken from parsed arguments.
+        """
+        return [item.format(**self.args.__dict__) for item in items]
+
+    def start_container(self):
+        """
+        Start the container with the SSH daemon inside.
+        """
+        commands = '&&'.join(self.format_args(
+            'DEBIAN_FRONTEND=noninteractive apt-get -qq install ssh',
+            'invoke-rc.d ssh stop',
+            ('echo \'AuthorizedKeysFile /etc/ssh/%u/authorized_keys\' > ' +
+                '/etc/ssh/sshd_config'),
+            'mkdir -p /etc/ssh/{user}',
+            'echo \'{identity}\' > /etc/ssh/{user}/authorized_keys',
+            'chsh -s /bin/bash {user}',
+            'usermod -p zzz {user}',
+            'chown -R --from={user} {host_uid} /app',
+            'usermod -u {host_uid} {user}',
+            '/usr/sbin/sshd -D',
+        ))
+        container_args = self.format_args(
+            'docker', 'run',
+            '-d',
+            '-P', '-p', '22',
+            '--entrypoint=/bin/bash',
+            '-u=root',
+            '{image}',
+            '-c',
+            commands,
+        )
+        self.container = subprocess.check_output(container_args).strip()
+        self.container_details = json.loads(
+            subprocess.check_output(
+                ['docker', 'inspect', self.container]
+            ).decode()
+        )[0]
+
+    def mount_root(self):
+        """
+        Mount the container's root directory on the host.
+        """
+
+        # If requested, mount the working directory
+        if 'mount_root' in self.args:
+            mount_root = self.args.mount_root
+            subprocess.call(['sudo', 'umount', mount_root],
+                            stderr=subprocess.DEVNULL)
+            subprocess.check_call(['mkdir', '-p', mount_root])
+            rootfs_path = \
+                '/var/lib/docker/{driver}/mnt/{container}/rootfs'.format(
+                    driver=self.container_details['Driver'],
+                    container=self.container.decode(),
+                )
+            subprocess.check_call(['sudo', 'mount', '-o', 'bind',
+                                rootfs_path,
+                                mount_root])
+
+
+    def print_ssh_details(self):
+        """
+        Wait for SSH service to start and print the command to SSH to
+        the container.
+        """
+
+        ssh_port = self.container_details['HostConfig']['PortBindings']\
+            ['22/tcp'][0]['HostPort']
+        ssh_command = self.format_args(
+            'ssh',
+            '{user}@localhost',
+            '-p',
+            ssh_port,
+        )
+        for _ in range(1, 10):
+            try:
+                subprocess.check_call(
+                    ssh_command + ['-o', 'StrictHostKeyChecking=no',
+                                '-o', 'PasswordAuthentication=no',
+                                'true'],
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                print(' '.join(ssh_command))
+                return
+            except subprocess.CalledProcessError:
+                pass
+            time.sleep(1)
+
+    def main(self):
+        """
+        Run the container with SSH set up.
+        """
+        self.start_container()
+        self.mount_root()
+        self.print_ssh_details()
 
 if __name__ == '__main__':
-    main()
+    Main().main()
