@@ -103,7 +103,7 @@ class Main(object):
                                 rootfs_path,
                                 mount_root])
             print("Container filesystem mounted on {mount_root}".format(
-                mount_root))
+                mount_root=mount_root))
 
 
     def print_ssh_details(self):
