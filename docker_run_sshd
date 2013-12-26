@@ -39,6 +39,23 @@ class Main(object):
         parser.add_argument('--mount-root',
                             help="The directory to mount the container root "
                                 "on the host (requires sudo)")
+        parser.add_argument('--database-host',
+                            default='172.17.42.1',
+                            help="The database host to provide "
+                                "to the container")
+        parser.add_argument('--database-port',
+                            default=5432,
+                            help="The database host to provide "
+                                "to the container")
+        parser.add_argument('--database',
+                            help="The database name to provide "
+                                "to the container")
+        parser.add_argument('--database-user',
+                            help="The database user to provide "
+                                "to the container")
+        parser.add_argument('--database-password',
+                            help="The database password to provide "
+                                "to the container")
         self.args = parser.parse_args()
         self.container = None
         self.container_details = None
@@ -49,15 +66,20 @@ class Main(object):
         """
         return [item.format(**self.args.__dict__) for item in items]
 
-    def start_container(self):
+    def setup_commands(self):
         """
-        Start the container with the SSH daemon inside.
+        The commands to install and start an SSH server in a container
         """
-        commands = '&&'.join(self.format_args(
+        commands = [
             'DEBIAN_FRONTEND=noninteractive apt-get -qq install ssh',
             'invoke-rc.d ssh stop',
-            ('echo \'AuthorizedKeysFile /etc/ssh/%u/authorized_keys\' > ' +
+            ('echo \'AuthorizedKeysFile /etc/ssh/%u/authorized_keys\' >> ' +
                 '/etc/ssh/sshd_config'),
+            'echo \'PermitUserEnvironment yes\' >> /etc/ssh/sshd_config',
+        ] + [
+            'echo \'{0}={1}\' >> /etc/environment'.format(*env)
+            for env in self.environment().items()
+        ] + [
             'mkdir -p /etc/ssh/{user}',
             'echo \'{identity}\' > /etc/ssh/{user}/authorized_keys',
             'chsh -s /bin/bash {user}',
@@ -65,18 +87,47 @@ class Main(object):
             'chown -R --from={user} {host_uid} /app',
             'usermod -u {host_uid} {user}',
             '/usr/sbin/sshd -D',
-        ))
-        container_args = self.format_args(
+        ]
+        return '&&'.join(self.format_args(*commands))
+
+    def environment(self):
+        """
+        The environment to set in the container
+        """
+        env = {}
+        if self.args.database:
+            env['DB_DEFAULT_TYPE'] = 'postgres'
+            env['DB_DEFAULT_HOST'] = self.args.database_host
+            env['DB_DEFAULT_PORT'] = self.args.database_port
+            env['DB_DEFAULT_NAME'] = self.args.database
+            env['DB_DEFAULT_USER'] = self.args.database_user
+            env['DB_DEFAULT_PASSWORD'] = self.args.database_password
+        return env
+
+    def container_command(self):
+        """
+        The command to run the container
+        """
+        docker_command = [
             'docker', 'run',
             '-d',
-            '-P', '-p', '22',
+            '-P',
+            '-p', '22',
             '--entrypoint=/bin/bash',
             '-u=root',
+        ]
+        docker_command += [
             '{image}',
-            '-c',
-            commands,
-        )
-        self.container = subprocess.check_output(container_args).strip()
+            '-c', self.setup_commands(),
+        ]
+        return self.format_args(*docker_command)
+
+    def start_container(self):
+        """
+        Start the container with the SSH daemon inside.
+        """
+        command = self.container_command()
+        self.container = subprocess.check_output(command).strip()
         self.container_details = json.loads(
             subprocess.check_output(
                 ['docker', 'inspect', self.container]
@@ -89,7 +140,7 @@ class Main(object):
         """
 
         # If requested, mount the working directory
-        if 'mount_root' in self.args:
+        if self.args.mount_root:
             mount_root = self.args.mount_root
             subprocess.call(['sudo', 'umount', mount_root],
                             stderr=subprocess.DEVNULL)
