@@ -95,6 +95,12 @@ class Main(object):
         The environment to set in the container
         """
         env = {}
+
+        env['ENVIRONMENT'] = 'dev_local'
+        env['DEVNAME'] = os.getlogin()
+
+        # TODO: SITE_DOMAIN, SITE_PROTOCOL
+
         if self.args.database:
             env['DB_DEFAULT_TYPE'] = 'postgres'
             env['DB_DEFAULT_HOST'] = self.args.database_host
@@ -102,6 +108,15 @@ class Main(object):
             env['DB_DEFAULT_NAME'] = self.args.database
             env['DB_DEFAULT_USER'] = self.args.database_user
             env['DB_DEFAULT_PASSWORD'] = self.args.database_password
+
+        # TODO: TZ
+
+        # TODO: EMAIL_HOST, EMAIL_PORT
+
+        # TODO: ELASTICSEARCH_URLS, ELASTICSEARCH_INDEX_NAME
+
+        # TODO: SYSLOG_SERVER, SYSLOG_PORT, SYSLOG_PROTO
+
         return env
 
     def container_command(self):
