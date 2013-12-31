@@ -61,6 +61,12 @@ class Main(object):
         self.container = None
         self.container_details = None
 
+        # Backfill for Python < 3.3
+        try:
+            self.devnull = subprocess.DEVNULL
+        except AttributeError:
+            self.devnull = open(self.devnull)
+
     def format_args(self, *items):
         """
         Format each item with values taken from parsed arguments.
@@ -159,7 +165,7 @@ class Main(object):
         if self.args.mount_root:
             mount_root = self.args.mount_root
             subprocess.call(['sudo', 'umount', mount_root],
-                            stderr=subprocess.DEVNULL)
+                            stderr=self.devnull)
             subprocess.check_call(['mkdir', '-p', mount_root])
             rootfs_path = \
                 '/var/lib/docker/{driver}/mnt/{container}/rootfs'.format(
@@ -193,9 +199,9 @@ class Main(object):
                     ssh_command + ['-o', 'StrictHostKeyChecking=no',
                                 '-o', 'PasswordAuthentication=no',
                                 'true'],
-                    stdin=subprocess.DEVNULL,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
+                    stdin=self.devnull,
+                    stdout=self.devnull,
+                    stderr=self.devnull,
                 )
                 print(' '.join(ssh_command))
                 return
