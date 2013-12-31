@@ -65,7 +65,7 @@ class Main(object):
         try:
             self.devnull = subprocess.DEVNULL
         except AttributeError:
-            self.devnull = open(self.devnull)
+            self.devnull = open(os.devnull)
 
     def format_args(self, *items):
         """
