@@ -164,14 +164,22 @@ class Main(object):
         # If requested, mount the working directory
         if self.args.mount_root:
             mount_root = self.args.mount_root
+
             subprocess.call(['sudo', 'umount', mount_root],
                             stderr=self.devnull)
             subprocess.check_call(['mkdir', '-p', mount_root])
+
+            driver = self.container_details['Driver']
             rootfs_path = \
-                '/var/lib/docker/{driver}/mnt/{container}/rootfs'.format(
-                    driver=self.container_details['Driver'],
+                '/var/lib/docker/{driver}/mnt/{container}'.format(
+                    driver=driver,
                     container=self.container.decode(),
                 )
+
+            # AUFS and DeviceMapper use different paths
+            if driver == 'devicemapper':
+                rootfs_path += '/rootfs'
+
             subprocess.check_call(['sudo', 'mount', '-o', 'bind',
                                 rootfs_path,
                                 mount_root])
