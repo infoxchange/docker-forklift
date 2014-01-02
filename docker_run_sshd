@@ -78,7 +78,7 @@ class Main(object):
         The commands to install and start an SSH server in a container
         """
         commands = [
-            'DEBIAN_FRONTEND=noninteractive apt-get -qq install ssh',
+            'DEBIAN_FRONTEND=noninteractive apt-get -qq install ssh sudo',
             'invoke-rc.d ssh stop',
             ('echo \'AuthorizedKeysFile /etc/ssh/%u/authorized_keys\' >> ' +
                 '/etc/ssh/sshd_config'),
@@ -93,6 +93,7 @@ class Main(object):
             'usermod -p zzz {user}',
             'chown -R --from={user} {host_uid} /app',
             'usermod -u {host_uid} {user}',
+            'echo \'{user} ALL=(ALL) NOPASSWD: ALL\' >> /etc/sudoers',
             '/usr/sbin/sshd -D',
         ]
         return '&&'.join(self.format_args(*commands))
