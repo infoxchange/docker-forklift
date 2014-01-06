@@ -25,6 +25,8 @@ class Main(object):
                         "enabling the user to log on to it."
         )
         parser.add_argument('image', metavar='IMAGE')
+        parser.add_argument('--privileged',
+                            default=False, action='store_true')
         parser.add_argument('-u', '--user', dest='user', default='app',
                             help="The user to enable logging in as")
         default_identity = (subprocess
@@ -139,6 +141,10 @@ class Main(object):
             '--entrypoint=/bin/bash',
             '-u=root',
         ]
+        if self.args.privileged:
+            docker_command += [
+                '-privileged',
+            ]
         docker_command += [
             '{image}',
             '-c', self.setup_commands(),
