@@ -42,6 +42,7 @@ class Main(object):
         parser.add_argument('--mount-root',
                             help="The directory to mount the container root "
                                 "on the host (requires sudo)")
+
         parser.add_argument('--database-host',
                             default='172.17.42.1',
                             help="The database host to provide "
@@ -59,6 +60,15 @@ class Main(object):
         parser.add_argument('--database-password',
                             help="The database password to provide "
                                 "to the container")
+
+        parser.add_argument('--elasticsearch-url',
+                            default='http://172.17.42.1:9200/',
+                            help="Elasticsearch URL to provide "
+                                "to the container")
+        parser.add_argument('--elasticsearch-index',
+                            help="Elasticsearch index name to provide "
+                                "to the container")
+
         self.args = parser.parse_args()
         self.container = None
         self.container_details = None
@@ -123,7 +133,9 @@ class Main(object):
 
         # TODO: EMAIL_HOST, EMAIL_PORT
 
-        # TODO: ELASTICSEARCH_URLS, ELASTICSEARCH_INDEX_NAME
+        if self.args.elasticsearch_index:
+            env['ELASTICSEARCH_URLS'] = self.args.elasticsearch_url
+            env['ELASTICSEARCH_INDEX_NAME'] = self.args.elasticsearch_index
 
         # TODO: SYSLOG_SERVER, SYSLOG_PORT, SYSLOG_PROTO
 
