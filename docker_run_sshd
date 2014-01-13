@@ -42,6 +42,9 @@ class Main(object):
         parser.add_argument('--mount-root',
                             help="The directory to mount the container root "
                                 "on the host (requires sudo)")
+        parser.add_argument('--storage',
+                            help="The host directory to provide "
+                                "to the container as storage volume")
 
         parser.add_argument('--database-host',
                             default='172.17.42.1',
@@ -158,6 +161,11 @@ class Main(object):
         if self.args.privileged:
             docker_command += [
                 '-privileged',
+            ]
+        if self.args.storage:
+            subprocess.check_call(['mkdir', '-p', self.args.storage])
+            docker_command += [
+                '-v', '{storage}:/storage',
             ]
         docker_command += [
             '{image}',
