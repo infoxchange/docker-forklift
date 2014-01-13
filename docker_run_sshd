@@ -105,6 +105,8 @@ class Main(object):
             'usermod -p zzz {user}',
             'chown -R --from={user} {host_uid} /app',
             'usermod -u {host_uid} {user}',
+            'chown -R {user} /etc/ssh/{user}',
+            'chmod -R go-rwx /etc/ssh/{user}',
             'echo \'{user} ALL=(ALL) NOPASSWD: ALL\' >> /etc/sudoers',
             '/usr/sbin/sshd -D',
         ]
