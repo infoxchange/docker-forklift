@@ -229,6 +229,7 @@ class Main(object):
             '{user}@localhost',
             '-p',
             ssh_port,
+            '-A',
         )
         for _ in range(1, 10):
             try:
