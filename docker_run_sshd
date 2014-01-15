@@ -52,7 +52,7 @@ class Main(object):
                                 "to the container")
         parser.add_argument('--database-port',
                             default=5432,
-                            help="The database host to provide "
+                            help="The database port to provide "
                                 "to the container")
         parser.add_argument('--database',
                             help="The database name to provide "
