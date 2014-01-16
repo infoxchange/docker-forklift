@@ -8,6 +8,7 @@ import argparse
 import json
 import os
 import pwd
+import socket
 import subprocess
 import time
 
@@ -72,7 +73,17 @@ class Main(object):
                             help="Elasticsearch index name to provide "
                                 "to the container")
 
-        self.args = parser.parse_args()
+        parser.add_argument('--serve-port',
+                            type=int,
+                            help="The port to serve the requests on")
+
+        self.args = vars(parser.parse_args())
+        if not self.args['serve_port']:
+            # Pick up a free port
+            with socket.socket() as sock:
+                sock.bind(('', 0))
+                self.args['serve_port'] = sock.getsockname()[1]
+
         self.container = None
         self.container_details = None
 
@@ -86,7 +97,7 @@ class Main(object):
         """
         Format each item with values taken from parsed arguments.
         """
-        return [item.format(**self.args.__dict__) for item in items]
+        return [item.format(**self.args) for item in items]
 
     def setup_commands(self):
         """
@@ -124,23 +135,24 @@ class Main(object):
         env['ENVIRONMENT'] = 'dev_local'
         env['DEVNAME'] = pwd.getpwuid(os.getuid())[0]
 
-        # TODO: SITE_DOMAIN, SITE_PROTOCOL
+        env['SITE_PROTOCOL'] = 'http'
+        env['SITE_DOMAIN'] = 'localhost:{serve_port}'.format(**self.args)
 
-        if self.args.database:
+        if self.args['database']:
             env['DB_DEFAULT_TYPE'] = 'postgres'
-            env['DB_DEFAULT_HOST'] = self.args.database_host
-            env['DB_DEFAULT_PORT'] = self.args.database_port
-            env['DB_DEFAULT_NAME'] = self.args.database
-            env['DB_DEFAULT_USER'] = self.args.database_user
-            env['DB_DEFAULT_PASSWORD'] = self.args.database_password
+            env['DB_DEFAULT_HOST'] = self.args['database_host']
+            env['DB_DEFAULT_PORT'] = self.args['database_port']
+            env['DB_DEFAULT_NAME'] = self.args['database']
+            env['DB_DEFAULT_USER'] = self.args['database_user']
+            env['DB_DEFAULT_PASSWORD'] = self.args['database_password']
 
         # TODO: TZ
 
         # TODO: EMAIL_HOST, EMAIL_PORT
 
-        if self.args.elasticsearch_index:
-            env['ELASTICSEARCH_URLS'] = self.args.elasticsearch_url
-            env['ELASTICSEARCH_INDEX_NAME'] = self.args.elasticsearch_index
+        if self.args['elasticsearch_index']:
+            env['ELASTICSEARCH_URLS'] = self.args['elasticsearch_url']
+            env['ELASTICSEARCH_INDEX_NAME'] = self.args['elasticsearch_index']
 
         # TODO: SYSLOG_SERVER, SYSLOG_PORT, SYSLOG_PROTO
 
@@ -153,17 +165,17 @@ class Main(object):
         docker_command = [
             'docker', 'run',
             '-d',
-            '-P',
+            '-p', '{serve_port}:8000',
             '-p', '22',
             '--entrypoint=/bin/bash',
             '-u=root',
         ]
-        if self.args.privileged:
+        if self.args['privileged']:
             docker_command += [
                 '-privileged',
             ]
-        if self.args.storage:
-            subprocess.check_call(['mkdir', '-p', self.args.storage])
+        if self.args['storage']:
+            subprocess.check_call(['mkdir', '-p', self.args['storage']])
             docker_command += [
                 '-v', '{storage}:/storage',
             ]
@@ -191,8 +203,8 @@ class Main(object):
         """
 
         # If requested, mount the working directory
-        if self.args.mount_root:
-            mount_root = self.args.mount_root
+        if self.args['mount_root']:
+            mount_root = self.args['mount_root']
 
             subprocess.call(['sudo', 'umount', mount_root],
                             stderr=self.devnull)
@@ -252,6 +264,14 @@ class Main(object):
         print(' '.join(ssh_command))
 
 
+    def print_url(self):
+        """
+        Print the URL the container is accessible on.
+        """
+
+        print('http://localhost:{serve_port}'.format(**self.args))
+
+
     def main(self):
         """
         Run the container with SSH set up.
@@ -259,6 +279,7 @@ class Main(object):
         self.start_container()
         self.mount_root()
         self.print_ssh_details()
+        self.print_url()
 
 if __name__ == '__main__':
     Main().main()
