@@ -12,6 +12,7 @@ import socket
 import subprocess
 import time
 
+
 class Main(object):
     """
     The main class.
@@ -42,36 +43,36 @@ class Main(object):
                             help="The UID to change the user to")
         parser.add_argument('--mount-root',
                             help="The directory to mount the container root "
-                                "on the host (requires sudo)")
+                                 "on the host (requires sudo)")
         parser.add_argument('--storage',
                             help="The host directory to provide "
-                                "to the container as storage volume")
+                                 "to the container as storage volume")
 
         parser.add_argument('--database-host',
                             default='172.17.42.1',
                             help="The database host to provide "
-                                "to the container")
+                                 "to the container")
         parser.add_argument('--database-port',
                             default=5432,
                             help="The database port to provide "
-                                "to the container")
+                                 "to the container")
         parser.add_argument('--database',
                             help="The database name to provide "
-                                "to the container")
+                                 "to the container")
         parser.add_argument('--database-user',
                             help="The database user to provide "
-                                "to the container")
+                                 "to the container")
         parser.add_argument('--database-password',
                             help="The database password to provide "
-                                "to the container")
+                                 "to the container")
 
         parser.add_argument('--elasticsearch-url',
                             default='http://172.17.42.1:9200/',
                             help="Elasticsearch URL to provide "
-                                "to the container")
+                                 "to the container")
         parser.add_argument('--elasticsearch-index',
                             help="Elasticsearch index name to provide "
-                                "to the container")
+                                 "to the container")
 
         parser.add_argument('--serve-port',
                             type=int,
@@ -222,11 +223,10 @@ class Main(object):
                 rootfs_path += '/rootfs'
 
             subprocess.check_call(['sudo', 'mount', '-o', 'bind',
-                                rootfs_path,
-                                mount_root])
+                                   rootfs_path,
+                                   mount_root])
             print("Container filesystem mounted on {mount_root}".format(
                 mount_root=mount_root))
-
 
     def print_ssh_details(self):
         """
@@ -234,8 +234,8 @@ class Main(object):
         the container.
         """
 
-        ssh_port = self.container_details['HostConfig']['PortBindings']\
-            ['22/tcp'][0]['HostPort']
+        port_config = self.container_details['HostConfig']['PortBindings']
+        ssh_port = port_config['22/tcp'][0]['HostPort']
         ssh_command = self.format_args(
             'ssh',
             '{user}@localhost',
@@ -247,8 +247,8 @@ class Main(object):
             try:
                 subprocess.check_call(
                     ssh_command + ['-o', 'StrictHostKeyChecking=no',
-                                '-o', 'PasswordAuthentication=no',
-                                'true'],
+                                   '-o', 'PasswordAuthentication=no',
+                                   'true'],
                     stdin=self.devnull,
                     stdout=self.devnull,
                     stderr=self.devnull,
@@ -263,14 +263,12 @@ class Main(object):
                   "with SSH setup.")
         print(' '.join(ssh_command))
 
-
     def print_url(self):
         """
         Print the URL the container is accessible on.
         """
 
         print('http://localhost:{serve_port}'.format(**self.args))
-
 
     def main(self):
         """
