@@ -10,7 +10,16 @@ import os
 import pwd
 import socket
 import subprocess
+import sys
 import time
+
+
+class ImproperlyConfigured(Exception):
+    """
+    The host is not properly configured for running Docker.
+    """
+
+    pass
 
 
 class Main(object):
@@ -93,6 +102,52 @@ class Main(object):
             self.devnull = subprocess.DEVNULL
         except AttributeError:
             self.devnull = open(os.devnull)
+
+    def check_settings(self):
+        """
+        Warn about common setup mistakes.
+        """
+
+        # Bad resolv.conf
+        with open('/etc/resolv.conf') as rcfile:
+            nameservers = [l for l in rcfile.read().splitlines()
+                           if 'nameserver' in l and not l.startswith('#')]
+            if any('127.0.0.1' in l or '127.0.1.1' in l
+                   for l in nameservers):
+                raise ImproperlyConfigured(
+                    "/etc/resolv.conf on the host specifies localhost "
+                    "as the name server. This will make Docker use Google "
+                    "Public DNS inside the container, and using apt-get "
+                    "on Infoxchange images will fail.\n"
+                    "Please fix /etc/resolv.conf on the host before "
+                    "continuing."
+                )
+
+        # Database not accessible
+        if self.args['database']:
+            try:
+                subprocess.check_output(['psql', '--version'])
+
+                try:
+                    os.putenv('PGPASSWORD', self.args['database_password'])
+                    subprocess.check_output(self.format_args(
+                        'psql',
+                        '-h', '{database_host}',
+                        '-U', '{database_user}',
+                        '{database}',
+                        '-c',
+                        'select version()',
+                    ))
+                except subprocess.CalledProcessError:
+                    raise ImproperlyConfigured(
+                        "Cannot access the specified database."
+                    )
+
+            except subprocess.CalledProcessError:
+                print(
+                    "Could not check database connectivity, as 'psql' "
+                    "tool is not installed."
+                )
 
     def format_args(self, *items):
         """
@@ -274,6 +329,12 @@ class Main(object):
         """
         Run the container with SSH set up.
         """
+        try:
+            self.check_settings()
+        except ImproperlyConfigured as ex:
+            print(ex)
+            sys.exit(1)
+
         self.start_container()
         self.mount_root()
         self.print_ssh_details()
