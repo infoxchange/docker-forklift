@@ -94,6 +94,9 @@ class Main(object):
                             help="Elasticsearch index name to provide "
                                  "to the container")
 
+        parser.add_argument('--proxy',
+                            help="The proxy URL to pass to the container")
+
         parser.add_argument('--serve-port',
                             type=int,
                             help="The port to serve the requests on")
@@ -241,6 +244,9 @@ class Main(object):
         if self.args['elasticsearch_index']:
             env['ELASTICSEARCH_URLS'] = self.args['elasticsearch_url']
             env['ELASTICSEARCH_INDEX_NAME'] = self.args['elasticsearch_index']
+
+        if self.args['proxy']:
+            env['HTTP_PROXY'] = self.args['proxy']
 
         # TODO: SYSLOG_SERVER, SYSLOG_PORT, SYSLOG_PROTO
 
