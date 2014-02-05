@@ -55,12 +55,8 @@ class Main(object):
                             default=False, action='store_true')
         parser.add_argument('-u', '--user', dest='user', default='app',
                             help="The user to enable logging in as")
-        default_identity = (subprocess
-                            .check_output(['ssh-add', '-L'])
-                            .decode()
-                            .strip())
         parser.add_argument('-i', '--identity', dest='identity',
-                            default=default_identity,
+                            default=None,
                             help="The SSH key to add")
         parser.add_argument('--host-uid',
                             default=os.getuid(),
@@ -174,6 +170,26 @@ class Main(object):
         """
         The commands to install and start an SSH server in a container
         """
+
+        # determine the user's SSH key(s)
+        if not self.args['identity']:
+            # provide the entire set of keys
+            identity = (subprocess
+                        .check_output(['ssh-add', '-L'])
+                        .decode()
+                        .strip())
+            if identity == '':
+                raise ImproperlyConfigured(
+                    "You don't seem to have any SSH keys! "
+                    "How do you do any work?")
+        else:
+            path = os.path.expanduser('~/.ssh/{identity}.pub'.format(
+                **self.args))
+            with open(path) as id_file:
+                identity = id_file.read().strip()
+
+        self.args['identity_file'] = identity
+
         commands = [
             'DEBIAN_FRONTEND=noninteractive apt-get -qq install ssh sudo',
             'invoke-rc.d ssh stop',
@@ -185,7 +201,7 @@ class Main(object):
             for env in self.environment().items()
         ] + [
             'mkdir -p /etc/ssh/{user}',
-            'echo \'{identity}\' > /etc/ssh/{user}/authorized_keys',
+            'echo \'{identity_file}\' > /etc/ssh/{user}/authorized_keys',
             'chsh -s /bin/bash {user}',
             'usermod -p zzz {user}',
             'chown -R --from={user} {host_uid} /app',
@@ -195,6 +211,7 @@ class Main(object):
             'echo \'{user} ALL=(ALL) NOPASSWD: ALL\' >> /etc/sudoers',
             '/usr/sbin/sshd -D',
         ]
+
         return '&&'.join(self.format_args(*commands))
 
     def environment(self):
@@ -313,6 +330,14 @@ class Main(object):
             ssh_port,
             '-A',
         )
+
+        if self.args['identity']:
+            ssh_command += (
+                '-i',
+                os.path.expanduser('~/.ssh/{identity}'.format(
+                    identity=self.args['identity']))
+            )
+
         for _ in range(1, 20):
             try:
                 subprocess.check_call(
