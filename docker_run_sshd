@@ -188,7 +188,7 @@ class Main(object):
             with open(path) as id_file:
                 identity = id_file.read().strip()
 
-        self.args['identity_file'] = identity
+        self.args['ssh_key'] = identity
 
         commands = [
             'DEBIAN_FRONTEND=noninteractive apt-get -qq install ssh sudo',
@@ -201,7 +201,7 @@ class Main(object):
             for env in self.environment().items()
         ] + [
             'mkdir -p /etc/ssh/{user}',
-            'echo \'{identity_file}\' > /etc/ssh/{user}/authorized_keys',
+            'echo \'{ssh_key}\' > /etc/ssh/{user}/authorized_keys',
             'chsh -s /bin/bash {user}',
             'usermod -p zzz {user}',
             'chown -R --from={user} {host_uid} /app',
