@@ -147,6 +147,7 @@ class Main(object):
                     subprocess.check_output(self.format_args(
                         'psql',
                         '-h', '{database_host}',
+                        '-p', '{database_port}',
                         '-U', '{database_user}',
                         '{database}',
                         '-c',
