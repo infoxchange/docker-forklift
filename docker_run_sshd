@@ -237,6 +237,11 @@ class Main(object):
             env['DB_DEFAULT_NAME'] = self.args['database']
             env['DB_DEFAULT_USER'] = self.args['database_user']
             env['DB_DEFAULT_PASSWORD'] = self.args['database_password']
+            env['DB_DEFAULT_URL'] = 'postgres://{database_user}:' \
+                                    '{database_password}@{database_host}:' \
+                                    '{database_port}/{database}' \
+                                    .format(**self.args)
+
 
         # TODO: TZ
 
