@@ -553,7 +553,7 @@ class Direct(Executioner):
         for key, value in self.environment().items():
             os.putenv(key, value)
 
-        subprocess.call(command)
+        return subprocess.call([self.target] + list(command))
 
 
 EXECUTIONERS = {
@@ -645,10 +645,7 @@ class Main(object):
             print(ex)
             sys.exit(1)
 
-        try:
-            return executioner.run(*command)
-        except subprocess.CalledProcessError as exp:
-            sys.exit(exp.returncode)
+        return executioner.run(*command)
 
 if __name__ == '__main__':
-    Main().main()
+    sys.exit(Main().main())
