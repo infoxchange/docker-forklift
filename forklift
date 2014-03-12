@@ -26,6 +26,7 @@ import socket
 import subprocess
 import sys
 import time
+import urllib.request
 import yaml
 
 from xdg.BaseDirectory import xdg_config_home
@@ -75,7 +76,7 @@ class Service(object):
         overrides = overrides or {}
 
         for provider in cls.providers:
-            service = provider()
+            service = getattr(cls, provider)()
 
             for key, value in overrides.items():
                 if key in cls.allow_override:
@@ -85,9 +86,10 @@ class Service(object):
                 return service
 
         raise ImproperlyConfigured(
-            "No available providers for service {0}.".format(cls))
+            "No available providers for service {0}.".format(cls.__name__))
 
-    def available(self):
+    @staticmethod
+    def available():
         """
         Check whether the service is available. Override to implement
         availability checks to warn the user instead of let the application
@@ -132,8 +134,9 @@ class PostgreSQLService(Service):
         """
 
         env_name = 'DB_{0}_URL'.format(self.DATABASE_NAME)
+        details = {k: v or '' for k, v in self.__dict__.items()}
         url = 'postgres://{user}:{password}@{host}:{port}/{name}'.format(
-                self.__dict__)
+                **details)
         return {env_name: url}
 
     def available(self):
@@ -149,11 +152,13 @@ class PostgreSQLService(Service):
             subprocess.check_output([
                 'psql',
                 '-h', self.host,
-                '-p', self.port,
+                '-p', str(self.port),
                 '-U', self.user,
                 self.name,
                 '-c', 'select version()',
             ])
+
+            return True
         except subprocess.CalledProcessError:
             return False
 
@@ -167,7 +172,7 @@ class PostgreSQLService(Service):
                    user=application_id(),
                    )
 
-    providers = (localhost,)
+    providers = ('localhost',)
 
 
 class ElasticsearchService(Service):
@@ -191,6 +196,28 @@ class ElasticsearchService(Service):
             'ELASTICSEARCH_URLS': self.url,
         }
 
+    def available(self):
+        """
+        Check whether Elasticsearch is available at a given URL.
+        """
+
+        try:
+            es_response = urllib.request.urlopen(self.url)
+            es_status = json.loads(es_response.read().decode())
+            return es_status['status'] == 200
+        except (urllib.request.URLError, ValueError):
+            return False
+
+    @classmethod
+    def localhost(cls):
+        """
+        The Elasticsearch environment on the local machine.
+        """
+        return cls(index_name=application_id(),
+                   url='http://localhost:9200')
+
+    providers = ('localhost',)
+
 
 class ProxyService(Service):
     """
@@ -210,7 +237,7 @@ class ProxyService(Service):
 
         if self.host:
             return {
-                'HTTP_PROXY': 'http://{host}:{port}'.format(self.__dict__),
+                'HTTP_PROXY': 'http://{host}:{port}'.format(**self.__dict__),
             }
         else:
             return {}
@@ -298,8 +325,6 @@ class Docker(Executioner):
     Execute the application packaged as a Docker container.
     """
 
-    # TODO: change every service's host attribute from localhost
-
     def run(self, *command):
         """
         Run the command in Docker container.
@@ -325,6 +350,18 @@ class Docker(Executioner):
         else:
             return self.run_docker(*command)
 
+    def environment(self):
+        """
+        Change every service's host attribute from localhost.
+        """
+
+        for service in self.services:
+            if 'host' in service.allow_override:
+                if service.host == 'localhost':
+                    service.host = '172.17.42.1'
+
+        return super().environment()
+
     def run_docker(self, *command, use_sshd=False):
         """
         Pass the command to Docker to start a container.
@@ -341,6 +378,9 @@ class Docker(Executioner):
                 '--entrypoint=/bin/bash',
                 '-u=root',
             ]
+        else:
+            for key, value in self.environment().items():
+                docker_command += ['-e', '{0}={1}'.format(key, value)]
         if self.conf.get('privileged'):
             docker_command += [
                 '-privileged',
@@ -374,7 +414,7 @@ class Docker(Executioner):
         """
 
         # If requested, mount the working directory
-        if self.conf['mount-root']:
+        if self.conf.get('mount-root'):
             mount_root = self.conf['mount-root']
 
             subprocess.call(['sudo', 'umount', mount_root],
@@ -566,7 +606,7 @@ class Main(object):
         args = []
         kwargs = {}
 
-        command_line = sys.argv[:]
+        command_line = sys.argv[1:]
         while command_line:
             arg = command_line.pop(0)
             if arg.startswith('--'):
@@ -601,10 +641,14 @@ class Main(object):
                 conf=self.conf,
             )
 
-            return executioner.run(*command)
         except ImproperlyConfigured as ex:
             print(ex)
             sys.exit(1)
+
+        try:
+            return executioner.run(*command)
+        except subprocess.CalledProcessError as exp:
+            sys.exit(exp.returncode)
 
 if __name__ == '__main__':
     Main().main()
