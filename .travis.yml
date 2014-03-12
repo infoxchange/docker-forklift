@@ -1,0 +1,7 @@
+language: python
+python:
+    - "3.3"
+    - "3.2"
+before_install:
+    - pip install pytest
+script: py.test
