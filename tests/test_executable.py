@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 #
 # Copyright 2014  Infoxchange Australia
 #
@@ -15,11 +14,30 @@
 # limitations under the License.3
 
 """
-The main entry point for Forklift.
+Test running Forklift executable directly.
 """
 
-import sys
+import os
+import subprocess
+import unittest
 
-from forklift import Forklift
 
-sys.exit(Forklift(sys.argv).main())
+class ExecutableTest(unittest.TestCase):
+    """
+    Base test case.
+    """
+
+    def run_forklift(self, *args):
+        """
+        Run Forklift with specified arguments.
+        """
+
+        return subprocess.call(['./forklift'] + list(args))
+
+    def test_direct_run(self):
+        """
+        Test running a command directly.
+        """
+
+        self.assertEqual(0, self.run_forklift('/bin/true'))
+        self.assertNotEqual(0, self.run_forklift('/bin/false'))

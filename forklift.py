@@ -242,15 +242,6 @@ class ProxyService(Service):
             return {}
 
 
-SERVICES = {
-    'postgres': PostgreSQLService,
-    'elasticsearch': ElasticsearchService,
-    'proxy': ProxyService,
-    # TODO: Email
-    # TODO: Syslog
-}
-
-
 class Executioner(object):
     """
     A method of executing the application with supplied services.
@@ -576,18 +567,25 @@ class Direct(Executioner):
         return os.path.exists(target)
 
 
-EXECUTIONERS = {
-    'direct': Direct,
-    'docker': Docker,
-}
-
-
 class Forklift(object):
     """
     The main class.
     """
 
-    def __init__(self):
+    services = {
+        'postgres': PostgreSQLService,
+        'elasticsearch': ElasticsearchService,
+        'proxy': ProxyService,
+        # TODO: Email
+        # TODO: Syslog
+    }
+
+    executioners = {
+        'direct': Direct,
+        'docker': Docker,
+    }
+
+    def __init__(self, argv):
         """
         Parse the command line and set up the class.
         """
@@ -605,7 +603,7 @@ class Forklift(object):
                          'forklift',
                          '{0}.yaml'.format(application_id()))))
 
-        (self.args, kwargs) = self.command_line_configuration()
+        (self.args, kwargs) = self.command_line_configuration(argv)
         self.conf.update(kwargs)
 
     def configuration_file(self, name):
@@ -618,7 +616,7 @@ class Forklift(object):
         except FileNotFoundError:
             return {}
 
-    def command_line_configuration(self):
+    def command_line_configuration(self, argv):
         """
         Parse settings from the command line.
         """
@@ -626,7 +624,7 @@ class Forklift(object):
         args = []
         kwargs = {}
 
-        command_line = sys.argv[1:]
+        command_line = argv[1:]
         while command_line:
             arg = command_line.pop(0)
             if arg.startswith('--'):
@@ -645,18 +643,18 @@ class Forklift(object):
         (target, *command) = self.args
 
         if 'executioner' in self.conf:
-            executioner_class = EXECUTIONERS[self.conf['executioner']]
+            executioner_class = self.executioners[self.conf['executioner']]
         else:
-            for executioner_class in EXECUTIONERS.values():
+            for executioner_class in self.executioners.values():
                 if executioner_class.valid_target(target):
                     break
             else:
-                executioner_class = EXECUTIONERS['docker']
+                executioner_class = self.executioners['docker']
 
         try:
             required_services = self.conf.get('services', [])
             services = [
-                SERVICES[service].provide(self.conf.get(service))
+                self.services[service].provide(self.conf.get(service))
                 for service in required_services
             ]
 
@@ -672,6 +670,3 @@ class Forklift(object):
             return 1
 
         return executioner.run(*command)
-
-if __name__ == '__main__':
-    sys.exit(Forklift().main())
