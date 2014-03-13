@@ -613,7 +613,7 @@ class Forklift(object):
         try:
             with open(name) as conffile:
                 return yaml.load(conffile)
-        except FileNotFoundError:
+        except IOError:
             return {}
 
     def command_line_configuration(self, argv):

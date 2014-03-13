@@ -35,7 +35,7 @@ try:
                           stdout=DEVNULL,
                           stderr=DEVNULL)
     DOCKER_AVAILABLE = True
-except (subprocess.CalledProcessError, FileNotFoundError):
+except (subprocess.CalledProcessError, IOError):
     pass
 
 docker = unittest.skipUnless(DOCKER_AVAILABLE, "Docker is unavailable")
