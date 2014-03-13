@@ -23,7 +23,7 @@ import unittest
 
 try:
     from subprocess import DEVNULL
-except AttributeError:
+except ImportError:
     DEVNULL = open(os.devnull)
 
 import forklift

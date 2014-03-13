@@ -32,7 +32,7 @@ from xdg.BaseDirectory import xdg_config_home
 
 try:
     from subprocess import DEVNULL
-except AttributeError:
+except ImportError:
     DEVNULL = open(os.devnull)
 
 
