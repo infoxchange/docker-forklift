@@ -55,9 +55,8 @@ class BasicTestCase(TestCase):
         Test running a command directly.
         """
 
-        self.assert_forklift_success('--executioner', 'direct', '/bin/true')
-        self.assertNotEqual(
-            0, self.run_forklift('--executioner', 'direct', '/bin/false'))
+        self.assert_forklift_success('/bin/true')
+        self.assertNotEqual(0, self.run_forklift('/bin/false'))
 
     @docker
     def test_docker_run(self):

@@ -267,6 +267,17 @@ class Executioner(object):
         self.added_environment = environment
         self.conf = conf
 
+    @staticmethod
+    def valid_target(target):
+        """
+        Guess whether a target is valid for the given executioner.
+
+        Override to have executioner chosen automatically based on target
+        given.
+        """
+
+        return False
+
     def run(self, *command):
         """
         Run the command on the target.
@@ -557,6 +568,14 @@ class Direct(Executioner):
 
         return subprocess.call([self.target] + list(command))
 
+    @staticmethod
+    def valid_target(target):
+        """
+        Check if the target is directly executable.
+        """
+
+        return os.path.exists(target)
+
 
 EXECUTIONERS = {
     'direct': Direct,
@@ -626,8 +645,14 @@ class Main(object):
 
         (target, *command) = self.args
 
-        executioner_class = EXECUTIONERS[
-            self.conf.get('executioner', 'docker')]
+        if 'executioner' in self.conf:
+            executioner_class = EXECUTIONERS[self.conf['executioner']]
+        else:
+            for executioner_class in EXECUTIONERS.values():
+                if executioner_class.valid_target(target):
+                    break
+            else:
+                executioner_class = EXECUTIONERS['docker']
 
         try:
             required_services = self.conf.get('services', [])
