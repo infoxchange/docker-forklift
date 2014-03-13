@@ -575,6 +575,21 @@ class Direct(Executioner):
         return os.path.exists(target)
 
 
+def dict_deep_merge(left, right):
+    """
+    Merge two dictionaries recursively, giving the right one preference.
+    """
+
+    if not isinstance(right, dict):
+        return right
+
+    result = left.copy()
+    for key, value in right.items():
+        result[key] = dict_deep_merge(result.get(key, {}), value)
+
+    return result
+
+
 class Forklift(object):
     """
     The main class.
@@ -614,10 +629,11 @@ class Forklift(object):
         # TODO: deep merge
 
         for conffile in self.configuration_files:
-            self.conf.update(self.file_configuration(conffile))
+            self.conf = dict_deep_merge(self.conf,
+                                        self.file_configuration(conffile))
 
         (self.args, kwargs) = self.command_line_configuration(argv)
-        self.conf.update(kwargs)
+        self.conf = dict_deep_merge(self.conf, kwargs)
 
     def file_configuration(self, name):
         """

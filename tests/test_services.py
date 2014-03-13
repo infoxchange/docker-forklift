@@ -145,7 +145,7 @@ class TestForklift(forklift.Forklift):
     services = merge_dicts({'test': TestService},
                            forklift.Forklift.services)
 
-    configuration_files = (tempfile.mktemp(),)
+    configuration_files = []
 
 
 class TestCase(unittest.TestCase):
@@ -202,19 +202,18 @@ class EnvironmentTestCase(TestCase):
         return dict(item.split('=') for item in output.split())
 
     @contextlib.contextmanager
-    def with_configuration(self, configuration):
+    def configuration_file(self, configuration):
         """
         Run a command with configuration written to the configuration file.
         """
 
-        conffile_name = TestForklift.configuration_files[0]
+        with tempfile.NamedTemporaryFile() as conffile:
+            TestForklift.configuration_files.append(conffile.name)
+            yaml.dump(configuration, conffile, encoding='utf-8')
 
-        with open(conffile_name, 'w') as conffile:
-            yaml.dump(configuration, conffile)
+            yield
 
-        yield
-
-        os.unlink(conffile_name)
+            TestForklift.configuration_files.pop()
 
     def test_direct_basic_environment(self):
         """
@@ -236,10 +235,10 @@ class EnvironmentTestCase(TestCase):
         Test passing service environment to the command.
         """
 
-        with self.with_configuration({'services': ['test']}):
+        with self.configuration_file({'services': ['test']}):
             self.assertEqual(self.capture_env()['FOO'], 'localhost-1-2')
 
-        with self.with_configuration({
+        with self.configuration_file({
             'services': ['test'],
             'test': {
                 'one': '111',
@@ -247,12 +246,20 @@ class EnvironmentTestCase(TestCase):
         }):
             self.assertEqual(self.capture_env()['FOO'], 'localhost-111-2')
 
+            with self.configuration_file({
+                'test': {
+                    'two': '222',
+                },
+            }):
+                self.assertEqual(
+                    self.capture_env()['FOO'], 'localhost-111-222')
+
     def test_added_environment(self):
         """
         Test passing additional environment to the command.
         """
 
-        with self.with_configuration({
+        with self.configuration_file({
             'environment': {
                 'BAR': 'additional',
             },
