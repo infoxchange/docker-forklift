@@ -17,10 +17,13 @@
 Tests for Forklift.
 """
 
+import contextlib
 import operator
 import os
 import subprocess
+import tempfile
 import unittest
+import yaml
 
 from functools import reduce
 try:
@@ -60,7 +63,7 @@ class TestService(forklift.Service):
         self.one = one
         self.two = two
 
-    allow_overrides = ('host', 'one', 'two')
+    allow_override = ('host', 'one', 'two')
 
     is_available = True
 
@@ -71,6 +74,12 @@ class TestService(forklift.Service):
         return {
             'FOO': '{host}-{one}-{two}'.format(**self.__dict__)
         }
+
+    providers = ('here',)
+
+    @classmethod
+    def here(cls):
+        return cls('localhost', '1', '2')
 
 
 class TestExecutioner(forklift.Executioner):
@@ -136,6 +145,8 @@ class TestForklift(forklift.Forklift):
     services = merge_dicts({'test': TestService},
                            forklift.Forklift.services)
 
+    configuration_files = (tempfile.mktemp(),)
+
 
 class TestCase(unittest.TestCase):
     """
@@ -178,29 +189,40 @@ class EnvironmentTestCase(TestCase):
     Test that environment is passed to the commands.
     """
 
-    @staticmethod
-    def parse_environment(env_output):
+    def capture_env(self):
         """
-        Parse the output of 'env' into a dict.
-        """
-
-        return dict(
-            item.split('=') for item in env_output.decode().split()
-        )
-
-
-    def test_direct_basic_environment(self):
-        """
-        Test passing basic environment to the command.
+        Run Forklift to capture the environment.
         """
 
         self.assertEqual(0, self.run_forklift(
             '--executioner', 'save_output',
             '/usr/bin/env'))
 
+        output = SaveOutputDirect.next_output().decode()
+        return dict(item.split('=') for item in output.split())
+
+    @contextlib.contextmanager
+    def with_configuration(self, configuration):
+        """
+        Run a command with configuration written to the configuration file.
+        """
+
+        conffile_name = TestForklift.configuration_files[0]
+
+        with open(conffile_name, 'w') as conffile:
+            yaml.dump(configuration, conffile)
+
+        yield
+
+        os.unlink(conffile_name)
+
+    def test_direct_basic_environment(self):
+        """
+        Test passing basic environment to the command.
+        """
 
         self.assertDictEqual(
-            self.parse_environment(SaveOutputDirect.next_output()),
+            self.capture_env(),
             {
                 'DEVNAME': 'myself',
                 'ENVIRONMENT': 'dev_local',
@@ -208,3 +230,31 @@ class EnvironmentTestCase(TestCase):
                 'SITE_DOMAIN': 'localhost:9999',
             }
         )
+
+    def test_service_environment(self):
+        """
+        Test passing service environment to the command.
+        """
+
+        with self.with_configuration({'services': ['test']}):
+            self.assertEqual(self.capture_env()['FOO'], 'localhost-1-2')
+
+        with self.with_configuration({
+            'services': ['test'],
+            'test': {
+                'one': '111',
+            },
+        }):
+            self.assertEqual(self.capture_env()['FOO'], 'localhost-111-2')
+
+    def test_added_environment(self):
+        """
+        Test passing additional environment to the command.
+        """
+
+        with self.with_configuration({
+            'environment': {
+                'BAR': 'additional',
+            },
+        }):
+            self.assertEqual(self.capture_env()['BAR'], 'additional')
