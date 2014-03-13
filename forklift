@@ -348,7 +348,8 @@ class Docker(Executioner):
         if command == ['sshd']:
             return self.run_sshd()
         else:
-            return self.run_docker(*command)
+            command = self.docker_command(*command)
+            return subprocess.call(command)
 
     def environment(self):
         """
@@ -362,9 +363,9 @@ class Docker(Executioner):
 
         return super().environment()
 
-    def run_docker(self, *command, use_sshd=False):
+    def docker_command(self, *command, use_sshd=False):
         """
-        Pass the command to Docker to start a container.
+        The Docker command to start a container.
         """
 
         docker_command = [
@@ -393,9 +394,7 @@ class Docker(Executioner):
         docker_command += [self.target]
         docker_command += command
 
-        container = subprocess.check_output(docker_command).strip()
-        self.mount_root(container)
-        return container
+        return docker_command
 
     @staticmethod
     def container_details(container):
@@ -488,12 +487,15 @@ class Docker(Executioner):
             'ssh_key': ssh_key,
         }
 
-        container = self.run_docker(
+        command = self.docker_command(
             '-c',
             ' && '.join(cmd.format(**args) for cmd in commands),
             use_sshd=True
         )
+        container = subprocess.check_output(command).strip()
+        self.mount_root(container)
         self.print_ssh_details(container)
+        return 0
 
     def print_ssh_details(self, container):
         """
