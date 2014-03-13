@@ -657,7 +657,11 @@ class Forklift(object):
         while command_line:
             arg = command_line.pop(0)
             if arg.startswith('--'):
-                kwargs[arg[2:]] = command_line.pop(0)
+                setting = arg[2:]
+                conf = command_line.pop(0)
+                for part in reversed(setting.split('.')):
+                    conf = {part: conf}
+                kwargs = dict_deep_merge(kwargs, conf)
             else:
                 args.append(arg)
 

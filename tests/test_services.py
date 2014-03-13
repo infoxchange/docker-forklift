@@ -189,14 +189,16 @@ class EnvironmentTestCase(TestCase):
     Test that environment is passed to the commands.
     """
 
-    def capture_env(self):
+    def capture_env(self, *args):
         """
         Run Forklift to capture the environment.
         """
 
         self.assertEqual(0, self.run_forklift(
             '--executioner', 'save_output',
-            '/usr/bin/env'))
+            '/usr/bin/env',
+            *args
+        ))
 
         output = SaveOutputDirect.next_output().decode()
         return dict(item.split('=') for item in output.split())
@@ -253,6 +255,11 @@ class EnvironmentTestCase(TestCase):
             }):
                 self.assertEqual(
                     self.capture_env()['FOO'], 'localhost-111-222')
+
+                self.assertEqual(
+                    self.capture_env('--test.host', 'otherhost')['FOO'],
+                    'otherhost-111-222'
+                )
 
     def test_added_environment(self):
         """
