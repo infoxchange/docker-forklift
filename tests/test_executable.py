@@ -24,7 +24,7 @@ import unittest
 
 class ExecutableTest(unittest.TestCase):
     """
-    Base test case.
+    Test running Forklift executable directly.
     """
 
     def run_forklift(self, *args):
@@ -34,7 +34,7 @@ class ExecutableTest(unittest.TestCase):
 
         return subprocess.call(['./forklift'] + list(args))
 
-    def test_direct_run(self):
+    def test_executable(self):
         """
         Test running a command directly.
         """

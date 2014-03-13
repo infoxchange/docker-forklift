@@ -147,7 +147,7 @@ class PostgreSQLService(Service):
             subprocess.check_output(['psql', '--version'])
 
             if self.password:
-                os.putenv('PGPASSWORD', self.password)
+                os.environ['PGPASSWORD'] = self.password
             subprocess.check_output([
                 'psql',
                 '-h', self.host,
@@ -275,20 +275,25 @@ class Executioner(object):
 
         raise NotImplementedError("Please override run().")
 
+    def base_environment(self):
+        """
+        The service-independent environment to supply to the application.
+        """
+
+        return {
+            'ENVIRONMENT': 'dev_local',
+            'DEVNAME': pwd.getpwuid(os.getuid())[0],
+            # TODO: TZ
+            'SITE_PROTOCOL': 'http',
+            'SITE_DOMAIN': 'localhost:{0}'.format(self.serve_port()),
+        }
+
     def environment(self):
         """
         The environment to supply to the application.
         """
 
-        env = {}
-
-        env['ENVIRONMENT'] = 'dev_local'
-        env['DEVNAME'] = pwd.getpwuid(os.getuid())[0]
-
-        # TODO: TZ
-
-        env['SITE_PROTOCOL'] = 'http'
-        env['SITE_DOMAIN'] = 'localhost:{0}'.format(self.serve_port())
+        env = self.base_environment()
 
         for service in self.services:
             env.update(service.environment())
@@ -554,9 +559,12 @@ class Direct(Executioner):
         """
 
         for key, value in self.environment().items():
-            os.putenv(key, value)
+            os.environ[key] = value
 
-        return subprocess.call([self.target] + list(command))
+        return self._run([self.target] + list(command))
+
+    def _run(self, command):
+        return subprocess.call(command)
 
     @staticmethod
     def valid_target(target):
@@ -585,6 +593,13 @@ class Forklift(object):
         'docker': Docker,
     }
 
+    configuration_files = (
+        'twistlock.yaml',
+        os.path.join(xdg_config_home,
+                     'forklift',
+                     '{0}.yaml'.format(application_id())),
+    )
+
     def __init__(self, argv):
         """
         Parse the command line and set up the class.
@@ -597,16 +612,14 @@ class Forklift(object):
 
         self.conf = {}
         # TODO: deep merge
-        self.conf.update(self.configuration_file('twistlock.yaml'))
-        self.conf.update(self.configuration_file(
-            os.path.join(xdg_config_home,
-                         'forklift',
-                         '{0}.yaml'.format(application_id()))))
+
+        for conffile in self.configuration_files:
+            self.conf.update(self.file_configuration(conffile))
 
         (self.args, kwargs) = self.command_line_configuration(argv)
         self.conf.update(kwargs)
 
-    def configuration_file(self, name):
+    def file_configuration(self, name):
         """
         Parse settings from a configuration file.
         """
