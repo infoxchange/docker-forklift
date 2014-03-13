@@ -54,7 +54,7 @@ class TestForklift(forklift.Forklift):
     Forklift with a test service.
     """
 
-    services = dict(list(forklift.Forklift.services.items()) + list({
+    services = dict(forklift.Forklift.services.items() | {
         'test': TestService,
     }.items()))
 
