@@ -56,7 +56,7 @@ class TestForklift(forklift.Forklift):
 
     services = dict(forklift.Forklift.services.items() | {
         'test': TestService,
-    }.items()))
+    }.items())
 
 
 class TestCase(unittest.TestCase):
