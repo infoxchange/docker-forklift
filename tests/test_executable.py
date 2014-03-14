@@ -17,7 +17,6 @@
 Test running Forklift executable directly.
 """
 
-import os
 import subprocess
 import unittest
 

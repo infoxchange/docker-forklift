@@ -1,2 +1,5 @@
+pep8
+pylint
+pylint-mccabe
 pyxdg
 pyyaml

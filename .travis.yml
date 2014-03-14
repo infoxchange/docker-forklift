@@ -2,4 +2,6 @@ language: python
 python:
     - "3.3"
     - "3.2"
-script: python -m unittest
+script:
+    - .githooks/pre-commit -f
+    - python -m unittest

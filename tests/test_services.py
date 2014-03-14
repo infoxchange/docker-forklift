@@ -43,7 +43,8 @@ try:
 except (subprocess.CalledProcessError, OSError):
     pass
 
-docker = unittest.skipUnless(DOCKER_AVAILABLE, "Docker is unavailable")
+docker = unittest.skipUnless(  # pylint:disable=invalid-name
+    DOCKER_AVAILABLE, "Docker is unavailable")
 
 
 DOCKER_BASE_IMAGE = 'ubuntu'
@@ -82,6 +83,9 @@ class TestService(forklift.Service):
 
     @classmethod
     def here(cls):
+        """
+        A sample provider.
+        """
         return cls('localhost', '1', '2')
 
 
@@ -112,6 +116,9 @@ class SaveOutputMixin(forklift.Executioner):
 
     @classmethod
     def next_output(cls):
+        """
+        Return and discard the next recorded output.
+        """
         return cls.outputs.pop(0)
 
     def _run(self, command):
@@ -130,6 +137,7 @@ class SaveOutputDirect(SaveOutputMixin, TestExecutioner, forklift.Direct):
     """
 
     pass
+
 
 class SaveOutputDocker(SaveOutputMixin, TestExecutioner, forklift.Docker):
     """
@@ -188,7 +196,8 @@ class ReturnCodeTestCase(TestCase):
         """
 
         self.assertEqual(0, self.run_forklift(DOCKER_BASE_IMAGE, '/bin/true'))
-        self.assertNotEqual(0, self.run_forklift(DOCKER_BASE_IMAGE, '/bin/false'))
+        self.assertNotEqual(0,
+                            self.run_forklift(DOCKER_BASE_IMAGE, '/bin/false'))
 
 
 class CaptureEnvironmentMixin(object):
@@ -239,6 +248,9 @@ class CaptureEnvironmentMixin(object):
 
     @staticmethod
     def localhost_reference():
+        """
+        The local host, as seen from inside the executioner.
+        """
         return 'localhost'
 
     def test_basic_environment(self):

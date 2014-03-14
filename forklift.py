@@ -23,7 +23,6 @@ import os
 import pwd
 import socket
 import subprocess
-import sys
 import time
 import urllib.request
 import yaml
@@ -42,6 +41,7 @@ class ImproperlyConfigured(Exception):
     """
 
     pass
+
 
 def application_id():
     """
@@ -87,8 +87,7 @@ class Service(object):
         raise ImproperlyConfigured(
             "No available providers for service {0}.".format(cls.__name__))
 
-    @staticmethod
-    def available():
+    def available(self):
         """
         Check whether the service is available. Override to implement
         availability checks to warn the user instead of let the application
@@ -115,6 +114,7 @@ class PostgreSQLService(Service):
 
     allow_override = ('name', 'host', 'port', 'user', 'password')
 
+    # pylint:disable=too-many-arguments
     def __init__(self,
                  name,
                  host='localhost',
@@ -135,7 +135,7 @@ class PostgreSQLService(Service):
         env_name = 'DB_{0}_URL'.format(self.DATABASE_NAME)
         details = {k: v or '' for k, v in self.__dict__.items()}
         url = 'postgres://{user}:{password}@{host}:{port}/{name}'.format(
-                **details)
+            **details)
         return {env_name: url}
 
     def available(self):
@@ -257,6 +257,7 @@ class Executioner(object):
         self.added_environment = environment
         self.conf = conf
 
+    # pylint:disable=unused-argument
     @staticmethod
     def valid_target(target):
         """
@@ -318,6 +319,8 @@ class Executioner(object):
         if 'serve_port' in self.conf:
             return self.conf['serve_port']
 
+        # pylint:disable=access-member-before-definition
+        # pylint:disable=attribute-defined-outside-init
         if hasattr(self, '_serve_port'):
             return self._serve_port
 
@@ -460,9 +463,9 @@ class Docker(Executioner):
         if 'identity' not in self.conf:
             # provide the entire set of keys
             ssh_key = (subprocess
-                        .check_output(['ssh-add', '-L'])
-                        .decode()
-                        .strip())
+                       .check_output(['ssh-add', '-L'])
+                       .decode()
+                       .strip())
             if ssh_key == '':
                 raise ImproperlyConfigured(
                     "You don't seem to have any SSH keys! "
@@ -671,7 +674,6 @@ class Forklift(object):
                 args.append(arg)
 
         return (args, kwargs)
-
 
     def main(self):
         """
