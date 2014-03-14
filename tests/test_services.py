@@ -124,14 +124,14 @@ class SaveOutputMixin(forklift.Executioner):
         return 0
 
 
-class SaveOutputDirect(forklift.Direct, SaveOutputMixin, TestExecutioner):
+class SaveOutputDirect(SaveOutputMixin, TestExecutioner, forklift.Direct):
     """
     A direct executioner augmented for testing.
     """
 
     pass
 
-class SaveOutputDocker(forklift.Docker, SaveOutputMixin, TestExecutioner):
+class SaveOutputDocker(SaveOutputMixin, TestExecutioner, forklift.Docker):
     """
     A Docker executioner augmented for testing.
     """
