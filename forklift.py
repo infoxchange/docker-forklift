@@ -30,7 +30,7 @@ import yaml
 from xdg.BaseDirectory import xdg_config_home
 
 try:
-    from subprocess import DEVNULL
+    from subprocess import DEVNULL  # pylint:disable=no-name-in-module
 except ImportError:
     DEVNULL = open(os.devnull)
 
@@ -419,6 +419,7 @@ class Docker(Executioner):
         Get the details of a container.
         """
         return json.loads(
+            # pylint:disable=no-member
             subprocess.check_output(
                 ['docker', 'inspect', container]
             ).decode()
@@ -462,6 +463,7 @@ class Docker(Executioner):
         # determine the user's SSH key(s)
         if 'identity' not in self.conf:
             # provide the entire set of keys
+            # pylint:disable=no-member
             ssh_key = (subprocess
                        .check_output(['ssh-add', '-L'])
                        .decode()
