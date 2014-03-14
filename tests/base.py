@@ -44,7 +44,7 @@ docker = unittest.skipUnless(  # pylint:disable=invalid-name
     DOCKER_AVAILABLE, "Docker is unavailable")
 
 
-DOCKER_BASE_IMAGE = 'ubuntu'
+DOCKER_BASE_IMAGE = 'debian:wheezy'
 
 
 def merge_dicts(*dicts):
@@ -165,9 +165,11 @@ class TestCase(unittest.TestCase):
     Base test case.
     """
 
+    forklift_class = TestForklift
+
     def run_forklift(self, *args):
         """
         Run Forklift with specified arguments.
         """
 
-        return TestForklift(['forklift'] + list(args)).main()
+        return self.forklift_class(['forklift'] + list(args)).main()

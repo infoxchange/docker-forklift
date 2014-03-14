@@ -26,7 +26,6 @@ from tests.base import (
     DOCKER_BASE_IMAGE,
     SaveOutputMixin,
     TestCase,
-    TestForklift,
 )
 
 
@@ -93,12 +92,12 @@ class CaptureEnvironmentMixin(object):
         """
 
         with tempfile.NamedTemporaryFile() as conffile:
-            TestForklift.configuration_files.append(conffile.name)
+            self.forklift_class.configuration_files.append(conffile.name)
             yaml.dump(configuration, conffile, encoding='utf-8')
 
             yield
 
-            TestForklift.configuration_files.pop()
+            self.forklift_class.configuration_files.pop()
 
     @staticmethod
     def localhost_reference():

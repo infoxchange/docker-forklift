@@ -362,7 +362,7 @@ class Docker(Executioner):
                     "continuing."
                 )
 
-        if command == ['sshd']:
+        if list(command) == ['sshd']:
             return self.run_sshd()
         else:
             command = self.docker_command(*command)
@@ -461,6 +461,7 @@ class Docker(Executioner):
         """
 
         # determine the user's SSH key(s)
+        identity = None
         if 'identity' not in self.conf:
             # provide the entire set of keys
             # pylint:disable=no-member
@@ -473,9 +474,11 @@ class Docker(Executioner):
                     "You don't seem to have any SSH keys! "
                     "How do you do any work?")
         else:
-            path = os.path.expanduser(
-                '~/.ssh/{}.pub'.format(self.conf['identity']))
-            with open(path) as id_file:
+            identity = self.conf['identity']
+            if not os.path.exists(identity):
+                identity = os.path.expanduser(
+                    '~/.ssh/{}'.format(self.conf['identity']))
+            with open(identity + '.pub') as id_file:
                 ssh_key = id_file.read().strip()
 
         commands = [
@@ -488,15 +491,18 @@ class Docker(Executioner):
             'echo \'{0}={1}\' >> /etc/environment'.format(*env)
             for env in self.environment().items()
         ] + [
+            '(useradd -m {user} || true)',
             'mkdir -p /etc/ssh/{user}',
             'echo \'{ssh_key}\' > /etc/ssh/{user}/authorized_keys',
             'chsh -s /bin/bash {user}',
             'usermod -p zzz {user}',
-            'chown -R --from={user} {host_uid} /app',
+            'chown -R --from={user} {host_uid} ~app',
             'usermod -u {host_uid} {user}',
             'chown -R {user} /etc/ssh/{user}',
             'chmod -R go-rwx /etc/ssh/{user}',
             'echo \'{user} ALL=(ALL) NOPASSWD: ALL\' >> /etc/sudoers',
+            'mkdir -p /var/run/sshd',
+            'chmod 0755 /var/run/sshd',
             '/usr/sbin/sshd -D',
         ]
 
@@ -513,13 +519,24 @@ class Docker(Executioner):
         )
         container = subprocess.check_output(command).strip()
         self.mount_root(container)
-        self.print_ssh_details(container)
+
+        ssh_command, ssh_available = self.ssh_command(container, identity)
+        if not ssh_available:
+            print("Timed out waiting for SSH setup. You can still try "
+                  "the command below but it might also indicate a problem "
+                  "with SSH setup.")
+        print(ssh_command)
+
         return 0
 
-    def print_ssh_details(self, container):
+    def ssh_command(self, container, identity=None):
         """
         Wait for SSH service to start and print the command to SSH to
         the container.
+
+        Returns a tuple of (command, available), where command is the command
+        to run and available is an indication of whether the self-test
+        succeeded.
         """
 
         container_details = self.container_details(container)
@@ -527,18 +544,14 @@ class Docker(Executioner):
         ssh_port = port_config['22/tcp'][0]['HostPort']
         ssh_command = [
             'ssh',
-            '{user}@localhost'.format(self.conf),
+            '{0}@localhost'.format(self.conf.get('user', 'app')),
             '-p',
             ssh_port,
             '-A',
         ]
 
-        if self.conf['identity']:
-            ssh_command += (
-                '-i',
-                os.path.expanduser('~/.ssh/{identity}'.format(
-                    identity=self.conf['identity']))
-            )
+        if identity:
+            ssh_command += ('-i', identity)
 
         for _ in range(1, 20):
             try:
@@ -550,15 +563,15 @@ class Docker(Executioner):
                     stdout=DEVNULL,
                     stderr=DEVNULL,
                 )
+                available = True
                 break
             except subprocess.CalledProcessError:
                 pass
             time.sleep(1)
         else:
-            print("Timed out waiting for SSH setup. You can still try "
-                  "the command below but it might also indicate a problem "
-                  "with SSH setup.")
-        print(' '.join(ssh_command))
+            available = False
+
+        return (' '.join(ssh_command), available)
 
 
 class Direct(Executioner):
