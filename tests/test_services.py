@@ -307,6 +307,7 @@ class DirectEnvironmentTestCase(CaptureEnvironmentMixin, TestCase):
         return 'save_output_direct'
 
 
+@docker
 class DockerEnvironmentTestCase(CaptureEnvironmentMixin, TestCase):
     """
     Test environment passed to the commands using Docker.
