@@ -275,6 +275,14 @@ class Executioner(object):
 
         raise NotImplementedError("Please override run().")
 
+    def _run(self, command):
+        """
+        Execute a command on the OS.
+
+        A hook point for overriding in tests.
+        """
+        return subprocess.call(command)
+
     def base_environment(self):
         """
         The service-independent environment to supply to the application.
@@ -355,7 +363,7 @@ class Docker(Executioner):
             return self.run_sshd()
         else:
             command = self.docker_command(*command)
-            return subprocess.call(command)
+            return self._run(command)
 
     def environment(self):
         """
@@ -562,9 +570,6 @@ class Direct(Executioner):
             os.environ[key] = value
 
         return self._run([self.target] + list(command))
-
-    def _run(self, command):
-        return subprocess.call(command)
 
     @staticmethod
     def valid_target(target):

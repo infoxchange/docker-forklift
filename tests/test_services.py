@@ -46,6 +46,9 @@ except (subprocess.CalledProcessError, OSError):
 docker = unittest.skipUnless(DOCKER_AVAILABLE, "Docker is unavailable")
 
 
+DOCKER_BASE_IMAGE = 'ubuntu'
+
+
 def merge_dicts(*dicts):
     """
     Merge an arbitrary number of dictionaries together.
@@ -95,34 +98,21 @@ class TestExecutioner(forklift.Executioner):
     def serve_port(self):
         return 9999
 
-
-class SaveOutputDirect(forklift.Direct, TestExecutioner):
-    """
-    An executioner saving the last run result.
-    """
-
-    outputs = []
-
     @staticmethod
     def valid_target(target):
         return False
 
+
+class SaveOutputMixin(forklift.Executioner):
+    """
+    A mixin to executioners to examine the commands output.
+    """
+
+    outputs = []
+
     @classmethod
     def next_output(cls):
         return cls.outputs.pop(0)
-
-    def run(self, *command):
-        """
-        Clean the environment before running the command.
-        """
-
-        original_environ = os.environ.copy()
-        try:
-            os.environ.clear()
-            return super().run(*command)
-        finally:
-            os.environ.update(original_environ)
-
 
     def _run(self, command):
         """
@@ -134,13 +124,30 @@ class SaveOutputDirect(forklift.Direct, TestExecutioner):
         return 0
 
 
+class SaveOutputDirect(forklift.Direct, SaveOutputMixin, TestExecutioner):
+    """
+    A direct executioner augmented for testing.
+    """
+
+    pass
+
+class SaveOutputDocker(forklift.Docker, SaveOutputMixin, TestExecutioner):
+    """
+    A Docker executioner augmented for testing.
+    """
+
+    pass
+
+
 class TestForklift(forklift.Forklift):
     """
     Forklift with a test service.
     """
 
-    executioners = merge_dicts({'save_output': SaveOutputDirect},
-                               forklift.Forklift.executioners)
+    executioners = merge_dicts({
+        'save_output_direct': SaveOutputDirect,
+        'save_output_docker': SaveOutputDocker,
+    }, forklift.Forklift.executioners)
 
     services = merge_dicts({'test': TestService},
                            forklift.Forklift.services)
@@ -180,28 +187,41 @@ class ReturnCodeTestCase(TestCase):
         Test running a command through Docker.
         """
 
-        self.assertEqual(0, self.run_forklift('ubuntu', '/bin/true'))
-        self.assertNotEqual(0, self.run_forklift('ubuntu', '/bin/false'))
+        self.assertEqual(0, self.run_forklift(DOCKER_BASE_IMAGE, '/bin/true'))
+        self.assertNotEqual(0, self.run_forklift(DOCKER_BASE_IMAGE, '/bin/false'))
 
 
-class EnvironmentTestCase(TestCase):
+class CaptureEnvironmentMixin(object):
     """
-    Test that environment is passed to the commands.
+    Mixin with tests to ensure environment is passed to commands correctly.
     """
 
-    def capture_env(self, *args):
+    @staticmethod
+    def executioner():
+        """
+        The executioner to use when running the commands.
+        """
+        raise NotImplementedError("Please override executioner().")
+
+    def capture_env(self, *args, prepend_args=None):
         """
         Run Forklift to capture the environment.
         """
 
-        self.assertEqual(0, self.run_forklift(
-            '--executioner', 'save_output',
-            '/usr/bin/env',
-            *args
-        ))
+        prepend_args = prepend_args or []
 
-        output = SaveOutputDirect.next_output().decode()
-        return dict(item.split('=') for item in output.split())
+        forklift_args = prepend_args + [
+            '--executioner', self.executioner(),
+            '/usr/bin/env', '-0',
+        ] + list(args)
+
+        self.assertEqual(0, self.run_forklift(*forklift_args))
+
+        output = SaveOutputMixin.next_output().decode()
+        return dict(
+            item.split('=', 1)
+            for item in output.rstrip('\0').split('\0')
+        )
 
     @contextlib.contextmanager
     def configuration_file(self, configuration):
@@ -217,20 +237,20 @@ class EnvironmentTestCase(TestCase):
 
             TestForklift.configuration_files.pop()
 
-    def test_direct_basic_environment(self):
+    @staticmethod
+    def localhost_reference():
+        return 'localhost'
+
+    def test_basic_environment(self):
         """
         Test passing basic environment to the command.
         """
 
-        self.assertDictEqual(
-            self.capture_env(),
-            {
-                'DEVNAME': 'myself',
-                'ENVIRONMENT': 'dev_local',
-                'SITE_PROTOCOL': 'http',
-                'SITE_DOMAIN': 'localhost:9999',
-            }
-        )
+        env = self.capture_env()
+        self.assertEqual(env['DEVNAME'], 'myself')
+        self.assertEqual(env['ENVIRONMENT'], 'dev_local')
+        self.assertEqual(env['SITE_PROTOCOL'], 'http')
+        self.assertEqual(env['SITE_DOMAIN'], 'localhost:9999')
 
     def test_service_environment(self):
         """
@@ -238,7 +258,8 @@ class EnvironmentTestCase(TestCase):
         """
 
         with self.configuration_file({'services': ['test']}):
-            self.assertEqual(self.capture_env()['FOO'], 'localhost-1-2')
+            self.assertEqual(self.capture_env()['FOO'],
+                             '{0}-1-2'.format(self.localhost_reference()))
 
         with self.configuration_file({
             'services': ['test'],
@@ -246,7 +267,8 @@ class EnvironmentTestCase(TestCase):
                 'one': '111',
             },
         }):
-            self.assertEqual(self.capture_env()['FOO'], 'localhost-111-2')
+            self.assertEqual(self.capture_env()['FOO'],
+                             '{0}-111-2'.format(self.localhost_reference()))
 
             with self.configuration_file({
                 'test': {
@@ -254,7 +276,8 @@ class EnvironmentTestCase(TestCase):
                 },
             }):
                 self.assertEqual(
-                    self.capture_env()['FOO'], 'localhost-111-222')
+                    self.capture_env()['FOO'],
+                    '{0}-111-222'.format(self.localhost_reference()))
 
                 self.assertEqual(
                     self.capture_env('--test.host', 'otherhost')['FOO'],
@@ -272,3 +295,38 @@ class EnvironmentTestCase(TestCase):
             },
         }):
             self.assertEqual(self.capture_env()['BAR'], 'additional')
+
+
+class DirectEnvironmentTestCase(CaptureEnvironmentMixin, TestCase):
+    """
+    Test that environment is passed to the commands using direct executioner.
+    """
+
+    @staticmethod
+    def executioner():
+        return 'save_output_direct'
+
+
+class DockerEnvironmentTestCase(CaptureEnvironmentMixin, TestCase):
+    """
+    Test environment passed to the commands using Docker.
+    """
+
+    @staticmethod
+    def executioner():
+        return 'save_output_docker'
+
+    @staticmethod
+    def localhost_reference():
+        # TODO: Can this change?
+        return '172.17.42.1'
+
+    def capture_env(self, *args, prepend_args=None):
+        """
+        Run Forklift to capture the environment.
+        """
+
+        prepend_args = prepend_args or []
+        prepend_args.append(DOCKER_BASE_IMAGE)
+
+        return super().capture_env(*args, prepend_args=prepend_args)
