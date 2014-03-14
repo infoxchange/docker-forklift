@@ -2,6 +2,8 @@ language: python
 python:
     - "3.3"
     - "3.2"
+before_install:
+    - npm install jshint
 script:
     - .githooks/pre-commit -f
     - python -m unittest
