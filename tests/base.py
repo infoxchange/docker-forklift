@@ -109,23 +109,24 @@ class SaveOutputMixin(forklift.Executioner):
     A mixin to executioners to examine the commands output.
     """
 
-    outputs = []
+    _last_output = [None]
 
     @classmethod
-    def next_output(cls):
+    def last_output(cls):
         """
-        Return and discard the next recorded output.
+        Return the output of the last command.
         """
-        return cls.outputs.pop(0)
+        return cls._last_output[0].decode()
 
     def _run(self, command):
         """
-        Save the command output.
+        Run the command, saving the output.
         """
-        output = subprocess.check_output(command)
-        self.outputs.append(output)
-        # TODO: preserve the exit code if needed
-        return 0
+        with subprocess.Popen(command, stdout=subprocess.PIPE) as process:
+            output, _ = process.communicate()
+        retcode = process.poll()
+        self._last_output[0] = output
+        return retcode
 
 
 class SaveOutputDirect(SaveOutputMixin, TestExecutioner, forklift.Direct):

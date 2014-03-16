@@ -29,32 +29,68 @@ from tests.base import (
 )
 
 
-class ReturnCodeTestCase(TestCase):
+class CommandsMixin(object):
     """
-    Test passing return code from commands.
+    Mixin with tests to ensure commands are run correctly.
     """
 
-    def test_direct_run(self):
+    def run_command(self, *command):
         """
-        Test running a command directly.
+        Run a command in Forklift.
+
+        Override to pass extra options.
         """
 
-        self.assertEqual(0, self.run_forklift('/bin/true'))
-        self.assertNotEqual(0, self.run_forklift('/bin/false'))
+        return self.run_forklift('--executioner', 'save_output_direct',
+                                 *command)
 
-    @docker
-    def test_docker(self):
+    def test_exit_code(self):
         """
-        Test running a command through Docker.
+        Test command exit codes.
         """
+
+        self.assertEqual(0, self.run_command('/bin/true'))
+        self.assertNotEqual(0, self.run_command('/bin/false'))
+
+    def test_output(self):
+        """
+        Test echoing things.
+        """
+
+        self.assertEqual(0, self.run_command('/bin/echo', 'apple', 'orange'))
+        self.assertEqual('apple orange\n', SaveOutputMixin.last_output())
 
         self.assertEqual(
             0,
-            self.run_forklift('--rm', DOCKER_BASE_IMAGE, '/bin/true')
+            self.run_command('--', '/bin/echo', '--apple', '--orange')
         )
-        self.assertNotEqual(
-            0,
-            self.run_forklift('--rm', DOCKER_BASE_IMAGE, '/bin/false')
+        self.assertEqual('--apple --orange\n', SaveOutputMixin.last_output())
+
+
+class DirectCommandsTestCase(CommandsMixin, TestCase):
+    """
+    Test running commands directly.
+    """
+
+    pass
+
+
+@docker
+class DockerCommandsTestCase(CommandsMixin, TestCase):
+    """
+    Test running commands via Docker.
+    """
+
+    def run_command(self, *command):
+        """
+        Run a command via Docker.
+        """
+
+        return self.run_forklift(
+            '--executioner', 'save_output_docker',
+            '--rm', 'yes',
+            DOCKER_BASE_IMAGE,
+            *command
         )
 
 
@@ -85,7 +121,7 @@ class CaptureEnvironmentMixin(object):
 
         self.assertEqual(0, self.run_forklift(*forklift_args))
 
-        output = SaveOutputMixin.next_output().decode()
+        output = SaveOutputMixin.last_output()
         return dict(
             item.split('=', 1)
             for item in output.rstrip('\0').split('\0')
