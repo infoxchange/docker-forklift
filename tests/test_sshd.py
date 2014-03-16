@@ -17,6 +17,7 @@
 Test SSH daemon setup.
 """
 
+import os
 import subprocess
 
 from tests.base import (
@@ -71,6 +72,8 @@ class SSHTestCase(TestCase):
     Test setting up an SSH daemon via Docker.
     """
 
+    private_key = 'tests/test_id_rsa'
+
     forklift_class = SSHTestForklift
 
     def test_sshd(self):
@@ -78,11 +81,12 @@ class SSHTestCase(TestCase):
         Test setting up an SSH daemon.
         """
 
+        os.chmod(self.private_key, 0o600)
+
         self.assertEqual(0, self.run_forklift(
             '--executioner', 'save_ssh_command_docker',
-            '--rm',
             DOCKER_BASE_IMAGE, 'sshd',
-            '--identity', 'tests/test_id_rsa',
+            '--identity', self.private_key,
         ))
 
         command, available = SaveSSHDetailsDocker.next_ssh_command()
