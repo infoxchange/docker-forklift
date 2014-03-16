@@ -389,6 +389,8 @@ class Docker(Executioner):
             'docker', 'run',
             '-p', '{0}:8000'.format(self.serve_port()),
         ]
+        if self.conf.get('rm'):
+            docker_command += ['--rm']
         if use_sshd:
             docker_command += [
                 '-d',

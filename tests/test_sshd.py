@@ -80,6 +80,7 @@ class SSHTestCase(TestCase):
 
         self.assertEqual(0, self.run_forklift(
             '--executioner', 'save_ssh_command_docker',
+            '--rm',
             DOCKER_BASE_IMAGE, 'sshd',
             '--identity', 'tests/test_id_rsa',
         ))

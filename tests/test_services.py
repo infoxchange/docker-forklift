@@ -48,9 +48,14 @@ class ReturnCodeTestCase(TestCase):
         Test running a command through Docker.
         """
 
-        self.assertEqual(0, self.run_forklift(DOCKER_BASE_IMAGE, '/bin/true'))
-        self.assertNotEqual(0,
-                            self.run_forklift(DOCKER_BASE_IMAGE, '/bin/false'))
+        self.assertEqual(
+            0,
+            self.run_forklift('--rm', DOCKER_BASE_IMAGE, '/bin/true')
+        )
+        self.assertNotEqual(
+            0,
+            self.run_forklift('--rm', DOCKER_BASE_IMAGE, '/bin/false')
+        )
 
 
 class CaptureEnvironmentMixin(object):
@@ -73,6 +78,7 @@ class CaptureEnvironmentMixin(object):
         prepend_args = prepend_args or []
 
         forklift_args = prepend_args + [
+            '--rm', 'yes',  # Only makes sense for Docker, harmless otherwise
             '--executioner', self.executioner(),
             '/usr/bin/env', '-0',
         ] + list(args)
