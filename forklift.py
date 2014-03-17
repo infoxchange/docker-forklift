@@ -272,7 +272,7 @@ class EmailService(Service):
             try:
                 sock.connect((self.host, self.port))
                 return True
-            except ConnectionError:
+            except socket.error:
                 return False
 
     @classmethod
