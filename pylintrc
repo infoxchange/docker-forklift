@@ -19,7 +19,7 @@ persistent=yes
 
 # List of plugins (as comma separated values of python modules names) to load,
 # usually to register additional checkers.
-load-plugins=
+load-plugins=pylint_mccabe
 
 
 [REPORTS]
@@ -78,12 +78,13 @@ disable=
     locally-disabled,
     no-self-use,
     star-args,
+    super-on-old-class,
     too-many-public-methods,
-	RP0101,
-	RP0401,
-	RP0402,
-	RP0701,
-	RP0801,
+    RP0101,
+    RP0401,
+    RP0402,
+    RP0701,
+    RP0801,
 
 
 [BASIC]

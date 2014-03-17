@@ -39,5 +39,5 @@ setup(
         'pep8',
         'pylint',
         'pylint-mccabe',
-    ]
+    ],
 )

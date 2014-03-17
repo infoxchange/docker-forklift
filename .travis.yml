@@ -4,6 +4,8 @@ python:
     - "3.2"
 before_install:
     - npm install jshint
+    - pip install pep8 pylint pylint_mccabe
+    - pip install pyxdg pyyaml
 script:
     - .githooks/pre-commit -f
     - python setup.py test
