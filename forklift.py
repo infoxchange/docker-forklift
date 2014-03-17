@@ -634,7 +634,7 @@ class Forklift(object):
     }
 
     configuration_files = (
-        'twistlock.yaml',
+        'forklift.yaml',
         os.path.join(xdg_config_home,
                      'forklift',
                      '{0}.yaml'.format(application_id())),
