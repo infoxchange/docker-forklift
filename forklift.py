@@ -242,6 +242,49 @@ class ProxyService(Service):
             return {}
 
 
+class EmailService(Service):
+    """
+    A MTA for the application.
+    """
+
+    allow_override = ('host', 'port')
+
+    def __init__(self, host=None, port=25):
+        self.host = host
+        self.port = port
+
+    def environment(self):
+        """
+        The environment to send email.
+        """
+
+        return {
+            'EMAIL_HOST': self.host,
+            'EMAIL_PORT': self.port,
+        }
+
+    def available(self):
+        """
+        Check whether the MTA is available.
+        """
+
+        with socket.socket() as sock:
+            try:
+                sock.connect((self.host, self.port))
+                return True
+            except ConnectionError:
+                return False
+
+    @classmethod
+    def localhost(cls):
+        """
+        The MTA on the local machine.
+        """
+        return cls(host='localhost')
+
+    providers = ('localhost',)
+
+
 class Executioner(object):
     """
     A method of executing the application with supplied services.
@@ -624,7 +667,7 @@ class Forklift(object):
         'postgres': PostgreSQLService,
         'elasticsearch': ElasticsearchService,
         'proxy': ProxyService,
-        # TODO: Email
+        'email': EmailService,
         # TODO: Syslog
     }
 

@@ -117,6 +117,14 @@ Provides an HTTP proxy as an URL in `HTTP_PROXY`.
 
 The following parameters can be overridden: `host`, `port`.
 
+### Email (SMTP)
+
+Provides an MTA for the application to connect to.
+
+Defaults to `localhost` port 25.
+
+The following parameters can be overridden: `host`, `port`.
+
 Configuration
 -------------
 
