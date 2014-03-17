@@ -11,6 +11,15 @@ Furthermore, it is often necessary to experiment within a running container.
 Forklift includes a special 'sshd' mode to start the SSH daemon instead of the
 original command, so that one can run arbitary commands inside.
 
+Installation
+------------
+
+    pip install .
+
+Warning: Forklift requires Python 3, and you should use the corresponding `pip`
+to install, e.g. `pip-3.2` on Debian systems. If unsure, check that
+`pip --version` reports being `python 3`.
+
 Running Forklift
 ----------------
 
