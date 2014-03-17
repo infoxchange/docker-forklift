@@ -42,10 +42,9 @@ application given is an existing file (e.g. `./manage.py`), it is run directly.
 Otherwise it is assumed to be a Docker image to create a container from.
 The environment is passed to the application in either case.
 
-To override the choice, set `executioner` parameter to either `docker` or
-`direct`.
+To override the choice, set `driver` parameter to either `docker` or `direct`.
 
-Docker executioner has specific parameters:
+Docker driver has specific parameters:
 
 * `rm`: Automatically remove containers after they've stopped.
 * `privileged`: Run containers in privileged mode.
@@ -135,7 +134,7 @@ options for PostgreSQL service, etc.
 
 Every parameter value is searched, in order, in the following locations:
 
-* Command line, e.g. `--executioner direct` or `--postgres.port 5433` (note the
+* Command line, e.g. `--driver direct` or `--postgres.port 5433` (note the
 nested parameter syntax).
 * User configuration file in `forklift/PROJECT.yaml`, where `PROJECT` is the
 base name of the current directory, inside the

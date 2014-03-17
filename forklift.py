@@ -285,14 +285,14 @@ class EmailService(Service):
     providers = ('localhost',)
 
 
-class Executioner(object):
+class Driver(object):
     """
     A method of executing the application with supplied services.
     """
 
     def __init__(self, target, services, environment, conf):
         """
-        Initialise the executioner with the specified target and services.
+        Initialise the driver with the specified target and services.
         """
 
         self.target = target
@@ -304,9 +304,9 @@ class Executioner(object):
     @staticmethod
     def valid_target(target):
         """
-        Guess whether a target is valid for the given executioner.
+        Guess whether a target is valid for the given driver.
 
-        Override to have executioner chosen automatically based on target
+        Override to have driver chosen automatically based on target
         given.
         """
 
@@ -380,7 +380,7 @@ class Executioner(object):
         print('http://localhost:{0}'.format(self.serve_port()))
 
 
-class Docker(Executioner):
+class Docker(Driver):
     """
     Execute the application packaged as a Docker container.
     """
@@ -619,7 +619,7 @@ class Docker(Executioner):
         return (' '.join(ssh_command), available)
 
 
-class Direct(Executioner):
+class Direct(Driver):
     """
     Execute the application directly.
     """
@@ -671,7 +671,7 @@ class Forklift(object):
         # TODO: Syslog
     }
 
-    executioners = {
+    drivers = {
         'direct': Direct,
         'docker': Docker,
     }
@@ -748,14 +748,14 @@ class Forklift(object):
 
         (target, *command) = self.args
 
-        if 'executioner' in self.conf:
-            executioner_class = self.executioners[self.conf['executioner']]
+        if 'driver' in self.conf:
+            driver_class = self.drivers[self.conf['driver']]
         else:
-            for executioner_class in self.executioners.values():
-                if executioner_class.valid_target(target):
+            for driver_class in self.drivers.values():
+                if driver_class.valid_target(target):
                     break
             else:
-                executioner_class = self.executioners['docker']
+                driver_class = self.drivers['docker']
 
         try:
             required_services = self.conf.get('services', [])
@@ -764,7 +764,7 @@ class Forklift(object):
                 for service in required_services
             ]
 
-            executioner = executioner_class(
+            driver = driver_class(
                 target=target,
                 services=services,
                 environment=self.conf.get('environment', {}),
@@ -775,4 +775,4 @@ class Forklift(object):
             print(ex)
             return 1
 
-        return executioner.run(*command)
+        return driver.run(*command)

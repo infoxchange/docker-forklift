@@ -41,7 +41,7 @@ class CommandsMixin(object):
         Override to pass extra options.
         """
 
-        return self.run_forklift('--executioner', 'save_output_direct',
+        return self.run_forklift('--driver', 'save_output_direct',
                                  *command)
 
     def test_exit_code(self):
@@ -87,7 +87,7 @@ class DockerCommandsTestCase(CommandsMixin, TestCase):
         """
 
         return self.run_forklift(
-            '--executioner', 'save_output_docker',
+            '--driver', 'save_output_docker',
             '--rm', 'yes',
             DOCKER_BASE_IMAGE,
             *command
@@ -100,11 +100,11 @@ class CaptureEnvironmentMixin(object):
     """
 
     @staticmethod
-    def executioner():
+    def driver():
         """
-        The executioner to use when running the commands.
+        The driver to use when running the commands.
         """
-        raise NotImplementedError("Please override executioner().")
+        raise NotImplementedError("Please override driver().")
 
     def capture_env(self, *args, prepend_args=None):
         """
@@ -115,7 +115,7 @@ class CaptureEnvironmentMixin(object):
 
         forklift_args = prepend_args + [
             '--rm', 'yes',  # Only makes sense for Docker, harmless otherwise
-            '--executioner', self.executioner(),
+            '--driver', self.driver(),
             '/usr/bin/env', '-0',
         ] + list(args)
 
@@ -144,7 +144,7 @@ class CaptureEnvironmentMixin(object):
     @staticmethod
     def localhost_reference():
         """
-        The local host, as seen from inside the executioner.
+        The local host, as seen from inside the driver.
         """
         return 'localhost'
 
@@ -206,11 +206,11 @@ class CaptureEnvironmentMixin(object):
 
 class DirectEnvironmentTestCase(CaptureEnvironmentMixin, TestCase):
     """
-    Test that environment is passed to the commands using direct executioner.
+    Test that environment is passed to the commands using direct driver.
     """
 
     @staticmethod
-    def executioner():
+    def driver():
         return 'save_output_direct'
 
 
@@ -221,7 +221,7 @@ class DockerEnvironmentTestCase(CaptureEnvironmentMixin, TestCase):
     """
 
     @staticmethod
-    def executioner():
+    def driver():
         return 'save_output_docker'
 
     @staticmethod

@@ -61,9 +61,9 @@ class SSHTestForklift(TestForklift):
     Test Forklift saving SSH commands.
     """
 
-    executioners = merge_dicts({
+    drivers = merge_dicts({
         'save_ssh_command_docker': SaveSSHDetailsDocker,
-    }, TestForklift.executioners)
+    }, TestForklift.drivers)
 
 
 @docker
@@ -84,7 +84,7 @@ class SSHTestCase(TestCase):
         os.chmod(self.private_key, 0o600)
 
         self.assertEqual(0, self.run_forklift(
-            '--executioner', 'save_ssh_command_docker',
+            '--driver', 'save_ssh_command_docker',
             DOCKER_BASE_IMAGE, 'sshd',
             '--identity', self.private_key,
         ))

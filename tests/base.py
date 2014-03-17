@@ -86,9 +86,9 @@ class TestService(forklift.Service):
         return cls('localhost', '1', '2')
 
 
-class TestExecutioner(forklift.Executioner):
+class TestDriver(forklift.Driver):
     """
-    Mock some executioner parameters for ease of testing.
+    Mock some driver parameters for ease of testing.
     """
 
     def base_environment(self):
@@ -104,9 +104,9 @@ class TestExecutioner(forklift.Executioner):
         return False
 
 
-class SaveOutputMixin(forklift.Executioner):
+class SaveOutputMixin(forklift.Driver):
     """
-    A mixin to executioners to examine the commands output.
+    A mixin to drivers to examine the commands output.
     """
 
     _last_output = [None]
@@ -129,17 +129,17 @@ class SaveOutputMixin(forklift.Executioner):
         return retcode
 
 
-class SaveOutputDirect(SaveOutputMixin, TestExecutioner, forklift.Direct):
+class SaveOutputDirect(SaveOutputMixin, TestDriver, forklift.Direct):
     """
-    A direct executioner augmented for testing.
+    A direct driver augmented for testing.
     """
 
     pass
 
 
-class SaveOutputDocker(SaveOutputMixin, TestExecutioner, forklift.Docker):
+class SaveOutputDocker(SaveOutputMixin, TestDriver, forklift.Docker):
     """
-    A Docker executioner augmented for testing.
+    A Docker driver augmented for testing.
     """
 
     pass
@@ -150,10 +150,10 @@ class TestForklift(forklift.Forklift):
     Forklift with a test service.
     """
 
-    executioners = merge_dicts({
+    drivers = merge_dicts({
         'save_output_direct': SaveOutputDirect,
         'save_output_docker': SaveOutputDocker,
-    }, forklift.Forklift.executioners)
+    }, forklift.Forklift.drivers)
 
     services = merge_dicts({'test': TestService},
                            forklift.Forklift.services)
