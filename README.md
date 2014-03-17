@@ -139,6 +139,16 @@ Defaults to `localhost` port 25.
 
 The following parameters can be overridden: `host`, `port`.
 
+### Logging (syslog)
+
+Provides a syslog instance to log events to.
+
+If not overridden, Forklift will start a daemon to print out all messages to
+standard output and provide its address to the application.
+
+The following parameters can be specified: `host`, `port`, `proto` (`tcp` or
+`udp`).
+
 Configuration
 -------------
 

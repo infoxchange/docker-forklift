@@ -55,6 +55,29 @@ def application_id():
     return os.path.basename(os.path.abspath(os.curdir))
 
 
+def free_port():
+    """
+    Find a free TCP port.
+    """
+
+    with socket.socket() as sock:
+        sock.bind(('', 0))
+        return sock.getsockname()[1]
+
+
+def port_open(host, port):
+    """
+    Check whether the specified TCP port is open.
+    """
+
+    with socket.socket() as sock:
+        try:
+            sock.connect((host, int(port)))
+            return True
+        except socket.error:
+            return False
+
+
 class Service(object):
     """
     Base class for services required by the application.
@@ -231,6 +254,16 @@ class ProxyService(Service):
         self.host = host
         self.port = port
 
+    def available(self):
+        """
+        Check whether the proxy is available.
+        """
+
+        if self.host:
+            return port_open(self.host, self.port)
+        else:
+            return True
+
     def environment(self):
         """
         The environment to access the proxy.
@@ -246,12 +279,12 @@ class ProxyService(Service):
 
 class EmailService(Service):
     """
-    A MTA for the application.
+    An MTA for the application.
     """
 
     allow_override = ('host', 'port')
 
-    def __init__(self, host=None, port=25):
+    def __init__(self, host, port=25):
         self.host = host
         self.port = port
 
@@ -262,7 +295,7 @@ class EmailService(Service):
 
         return {
             'EMAIL_HOST': self.host,
-            'EMAIL_PORT': self.port,
+            'EMAIL_PORT': str(self.port),
         }
 
     def available(self):
@@ -270,12 +303,7 @@ class EmailService(Service):
         Check whether the MTA is available.
         """
 
-        with socket.socket() as sock:
-            try:
-                sock.connect((self.host, self.port))
-                return True
-            except socket.error:
-                return False
+        return port_open(self.host, self.port)
 
     @classmethod
     def localhost(cls):
@@ -285,6 +313,92 @@ class EmailService(Service):
         return cls(host='localhost')
 
     providers = ('localhost',)
+
+
+class SyslogService(Service):
+    """
+    Logging facility for the application.
+    """
+
+    DEFAULT_PORT = 514
+
+    allow_override = ('host', 'port', 'proto')
+
+    def __init__(self, host=None, port=DEFAULT_PORT, proto='udp'):
+        self.host = host
+        self.port = port
+        self.proto = proto
+
+    def environment(self):
+        """
+        The environment to provide logging.
+        """
+
+        return {
+            'SYSLOG_SERVER': self.host,
+            'SYSLOG_PORT': str(self.port),
+            'SYSLOG_PROTO': self.proto,
+        }
+
+    def available(self):
+        """
+        Check whether syslog is available.
+
+        If the protocol is UDP, assume it is available if any of the other
+        parameters are set.
+        """
+
+        if self.host is None:
+            return False
+
+        if self.proto == 'udp':
+            return True
+        else:
+            return port_open(self.host, self.port)
+
+    @classmethod
+    def manual(cls):
+        """
+        Manually-configured syslog. Will not be available unless parameters
+        are overridden in configuration.
+        """
+
+        return cls()
+
+    @classmethod
+    def stdout(cls):
+        """
+        Logger printing all the messages to the standard output of Forklift.
+        """
+
+        # Adapted from https://gist.github.com/marcelom/4218010
+        import socketserver
+        import threading
+
+        class SyslogHandler(socketserver.BaseRequestHandler):
+            """
+            Handler outputting logging messages received to stdout.
+            """
+            def handle(self):
+                data = self.request[0].strip().decode()
+                print(data)
+
+        class ThreadedUDPServer(socketserver.ThreadingMixIn,
+                                socketserver.UDPServer):
+            """
+            Threaded UDP server.
+            """
+            pass
+
+        port = free_port()
+        server = ThreadedUDPServer(('0.0.0.0', port), SyslogHandler)
+        server_thread = threading.Thread(target=server.serve_forever)
+        server_thread.daemon = True
+        server_thread.start()
+
+        return cls('localhost', port)
+
+    providers = ('manual', 'stdout')
 
 
 class Driver(object):
@@ -369,9 +483,7 @@ class Driver(object):
         if hasattr(self, '_serve_port'):
             return self._serve_port
 
-        with socket.socket() as sock:
-            sock.bind(('', 0))
-            self._serve_port = sock.getsockname()[1]
+        self._serve_port = free_port()
         return self._serve_port
 
     def print_url(self):
@@ -674,7 +786,7 @@ class Forklift(object):
         'elasticsearch': ElasticsearchService,
         'proxy': ProxyService,
         'email': EmailService,
-        # TODO: Syslog
+        'syslog': SyslogService,
     }
 
     drivers = {
@@ -700,7 +812,6 @@ class Forklift(object):
         # - command line
 
         self.conf = {}
-        # TODO: deep merge
 
         for conffile in self.configuration_files:
             self.conf = dict_deep_merge(self.conf,
