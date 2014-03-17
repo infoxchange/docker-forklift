@@ -111,6 +111,12 @@ and if successful, the current directory name is provided to use as the index.
 
 The following parameters can be overridden: `url`, `index_name`.
 
+### HTTP Proxy
+
+Provides an HTTP proxy as an URL in `HTTP_PROXY`.
+
+The following parameters can be overridden: `host`, `port`.
+
 Configuration
 -------------
 
