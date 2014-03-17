@@ -16,7 +16,7 @@ Running Forklift
 
 The basic invocation is:
 
-    forklift <application> <arguments>...
+    forklift APPLICATION ARGUMENT...
 
 What happens is:
 
@@ -34,8 +34,8 @@ For example, if the project specifies:
 Forklift will check if the PostgreSQL server is running on the local machine,
 and pass the database URL to the application.
 
-Docker vs. direct run
----------------------
+Docker
+------
 
 Forklift can run commands directly or Docker containers. By default, if the
 application given is an existing file (e.g. `./manage.py`), it is run directly.
@@ -44,6 +44,33 @@ The environment is passed to the application in either case.
 
 To override the choice, set `executioner` parameter to either `docker` or
 `direct`.
+
+Docker executioner has specific parameters:
+
+* `rm`: Automatically remove containers after they've stopped.
+* `privileged`: Run containers in privileged mode.
+* `storage`: Run the container with `/storage` mounted as a volume under the
+specified path.
+* `mount-root`: Bind mount the root directory of the container filesystem to
+the specified path.
+
+### SSH daemon mode
+
+Forklift can set up an SSH server inside the container, passing in all the
+environment and adding the user public key. To use this mode, pass `sshd` as
+the command (e.g. `forklift ubuntu sshd`).
+
+The following additional options apply in SSH daemon mode:
+
+* `user` - the user to set up for SSH in the container, defaults to `app`.
+* `identity` - the public key file to authorise logging in as. Can be specified
+as the full path or as a file in `~/.ssh`.
+* `host-uid` - for ease to use with `mount-root`, the UID of the user inside
+the container is changed to the one of the host user; override if needed.
+
+When running in SSH daemon mode, Forklift starts the container in the
+background and prints a command to SSH to it. It is up to the user to stop
+the container when no longer needed.
 
 Services and environment
 ------------------------
