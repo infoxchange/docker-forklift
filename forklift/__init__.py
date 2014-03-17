@@ -23,6 +23,7 @@ import os
 import pwd
 import socket
 import subprocess
+import sys
 import time
 import urllib.request
 import yaml
@@ -776,3 +777,15 @@ class Forklift(object):
             return 1
 
         return driver.run(*command)
+
+
+def main():
+    """
+    Main entry point.
+    """
+
+    return Forklift(sys.argv).main()
+
+
+if __name__ == '__main__':
+    main()
