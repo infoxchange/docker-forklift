@@ -750,10 +750,32 @@ class Forklift(object):
 
         return (args, kwargs)
 
+    def help(self):
+        """
+        Render the help file.
+        """
+
+        from pkg_resources import resource_stream
+        readme = resource_stream(__name__, 'README.md')
+
+        # Try to format the README nicely if Pandoc is installed
+        try:
+            subprocess.check_call(['pandoc', '-v'],
+                                  stdout=DEVNULL, stderr=DEVNULL)
+            pager = 'pandoc -s -f markdown -t man README.md | man -l -'
+        except OSError:
+            pager = os.environ.get('PAGER', 'more')
+
+        subprocess.check_call(pager, shell=True, stdin=readme)
+
     def main(self):
         """
         Run the specified application command.
         """
+
+        if 'help' in self.conf or len(self.args) == 0:
+            self.help()
+            return 0
 
         (target, *command) = self.args
 

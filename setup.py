@@ -31,16 +31,22 @@ setup(
     url='https://github.com/infoxchange/docker-forklift',
     license='Apache 2.0',
     long_description=open('README.md').read(),
+
     packages=find_packages(exclude=['tests']),
+    package_data={
+        'forklift': ['README.md'],
+    },
     entry_points={
         'console_scripts': [
             'forklift = forklift:main',
         ],
     },
+
     install_requires=[
         'pyxdg',
         'pyyaml',
     ],
+
     test_suite='tests',
     tests_require=[
         'pep8',
