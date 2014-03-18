@@ -448,7 +448,7 @@ class Docker(Driver):
                 docker_command += ['-e', '{0}={1}'.format(key, value)]
         if self.conf.get('privileged'):
             docker_command += [
-                '-privileged',
+                '--privileged',
             ]
         if self.conf.get('interactive'):
             docker_command += [
