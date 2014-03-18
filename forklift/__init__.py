@@ -154,6 +154,7 @@ class PostgreSQLService(Service):
                 '-h', self.host,
                 '-p', str(self.port),
                 '-U', self.user,
+                '-w',
                 self.name,
                 '-c', 'select version()',
             ])
