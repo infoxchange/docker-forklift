@@ -18,6 +18,9 @@ Setup script.
 """
 
 from setuptools import setup, find_packages
+from sys import version_info
+
+assert version_info >= (3,), "Python 3 is required."
 
 setup(
     name='forklift',
