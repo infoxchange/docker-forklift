@@ -14,11 +14,16 @@ original command, so that one can run arbitary commands inside.
 Installation
 ------------
 
+    sudo pip install .
+
+Or in a virtualenv:
+
     pip install .
 
 Warning: Forklift requires Python 3, and you should use the corresponding `pip`
-to install, e.g. `pip-3.2` on Debian systems. If unsure, check that
-`pip --version` reports being `python 3`.
+to install, for example, `pip-3.2` on Debian and `pip-3` on Ubuntu
+(`sudo apt-get install python3-pip`). If unsure, check that `pip --version`
+reports being `python 3`.
 
 Running Forklift
 ----------------
