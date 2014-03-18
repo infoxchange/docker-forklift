@@ -449,6 +449,10 @@ class Docker(Driver):
             docker_command += [
                 '-privileged',
             ]
+        if self.conf.get('interactive'):
+            docker_command += [
+                '-i', '-t',
+            ]
         if self.conf.get('storage'):
             subprocess.check_call(['mkdir', '-p', self.conf['storage']])
             docker_command += [

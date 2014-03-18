@@ -57,6 +57,7 @@ Docker driver has specific parameters:
 
 * `rm`: Automatically remove containers after they've stopped.
 * `privileged`: Run containers in privileged mode.
+* `interactive`: Run containers in interactive mode (`-i -t`).
 * `storage`: Run the container with `/storage` mounted as a volume under the
 specified path.
 * `mount-root`: Bind mount the root directory of the container filesystem to
