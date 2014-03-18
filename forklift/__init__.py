@@ -736,7 +736,10 @@ class Forklift(object):
                     parsing_kwargs = False
                 elif arg.startswith('--'):
                     setting = arg[2:]
-                    conf = command_line.pop(0)
+                    if not command_line or command_line[0].startswith('--'):
+                        conf = True
+                    else:
+                        conf = command_line.pop(0)
                     for part in reversed(setting.split('.')):
                         conf = {part: conf}
                     kwargs = dict_deep_merge(kwargs, conf)
