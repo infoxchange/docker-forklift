@@ -762,7 +762,7 @@ class Forklift(object):
         try:
             subprocess.check_call(['pandoc', '-v'],
                                   stdout=DEVNULL, stderr=DEVNULL)
-            pager = 'pandoc -s -f markdown -t man README.md | man -l -'
+            pager = 'pandoc -s -f markdown -t man | man -l -'
         except OSError:
             pager = os.environ.get('PAGER', 'more')
 
