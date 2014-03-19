@@ -276,6 +276,17 @@ class ProxyService(Service):
         else:
             return {}
 
+    @classmethod
+    def manual(cls):
+        """
+        Manually-configured proxy. Will not be available unless parameters
+        are overridden in configuration.
+        """
+
+        return cls()
+
+    providers = ('manual',)
+
 
 class EmailService(Service):
     """
