@@ -167,6 +167,11 @@ base name of the current directory, inside the
 * Project configuration file - `forklift.yaml` in the current directory.
 
 This allows granular overriding of the (hopefully useful) Forklift defaults.
+For example, if the local database requires a password, it can be stored
+in a local configuration file, e.g. `$HOME/.config/forklift/myapp.yaml`:
+
+    postgres:
+      password: l@m3password
 
 [dj-database-url]: https://github.com/kennethreitz/dj-database-url
 [xdg]: http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
