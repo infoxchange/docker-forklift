@@ -136,6 +136,10 @@ class PostgreSQLService(Service):
 
     DATABASE_NAME = 'DEFAULT'
 
+    URL_SCHEME = 'postgres'
+
+    CHECK_COMMAND = 'select version()'
+
     allow_override = ('name', 'host', 'port', 'user', 'password')
 
     # pylint:disable=too-many-arguments
@@ -158,7 +162,8 @@ class PostgreSQLService(Service):
 
         env_name = 'DB_{0}_URL'.format(self.DATABASE_NAME)
         details = {k: v or '' for k, v in self.__dict__.items()}
-        url = 'postgres://{user}:{password}@{host}:{port}/{name}'.format(
+        details['scheme'] = self.URL_SCHEME
+        url = '{scheme}://{user}:{password}@{host}:{port}/{name}'.format(
             **details)
         return {env_name: url}
 
@@ -179,7 +184,7 @@ class PostgreSQLService(Service):
                 '-U', self.user,
                 '-w',
                 self.name,
-                '-c', 'select version()',
+                '-c', self.CHECK_COMMAND,
             ])
 
             return True
@@ -197,6 +202,16 @@ class PostgreSQLService(Service):
                    )
 
     providers = ('localhost',)
+
+
+class PostGISService(PostgreSQLService):
+    """
+    PostgreSQL database with PostGIS support.
+    """
+
+    URL_SCHEME = 'postgis'
+
+    CHECK_COMMAND = 'select PostGIS_full_version()'
 
 
 class ElasticsearchService(Service):
@@ -794,6 +809,7 @@ class Forklift(object):
 
     services = {
         'postgres': PostgreSQLService,
+        'postgis': PostGISService,
         'elasticsearch': ElasticsearchService,
         'proxy': ProxyService,
         'email': EmailService,
