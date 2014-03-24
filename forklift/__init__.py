@@ -104,6 +104,10 @@ class Service(object):
             for key, value in overrides.items():
                 if key in cls.allow_override:
                     setattr(service, key, value)
+                else:
+                    raise ImproperlyConfigured(
+                        "Invalid parameter {0} for service {1}.".format(
+                            key, cls.__name__))
 
             if service.available():
                 return service
