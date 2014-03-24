@@ -219,11 +219,11 @@ class ElasticsearchService(Service):
     Elasticsearch service for the application.
     """
 
-    allow_override = ('index_name', 'url')
+    allow_override = ('index_name', 'urls')
 
-    def __init__(self, index_name, url):
+    def __init__(self, index_name, urls):
         self.index_name = index_name
-        self.url = url
+        self.urls = urls
 
     def environment(self):
         """
@@ -232,7 +232,7 @@ class ElasticsearchService(Service):
 
         return {
             'ELASTICSEARCH_INDEX_NAME': self.index_name,
-            'ELASTICSEARCH_URLS': self.url,
+            'ELASTICSEARCH_URLS': self.urls,
         }
 
     def available(self):
@@ -240,12 +240,20 @@ class ElasticsearchService(Service):
         Check whether Elasticsearch is available at a given URL.
         """
 
-        try:
-            es_response = urllib.request.urlopen(self.url)
-            es_status = json.loads(es_response.read().decode())
-            return es_status['status'] == 200
-        except (urllib.request.URLError, ValueError):
+        urls = self.urls.split('|')
+        if not urls:
             return False
+
+        for url in urls:
+            try:
+                es_response = urllib.request.urlopen(url)
+                es_status = json.loads(es_response.read().decode())
+                if es_status['status'] != 200:
+                    return False
+            except (urllib.request.URLError, ValueError):
+                return False
+
+        return True
 
     @classmethod
     def localhost(cls):
@@ -253,7 +261,7 @@ class ElasticsearchService(Service):
         The Elasticsearch environment on the local machine.
         """
         return cls(index_name=application_id(),
-                   url='http://localhost:9200')
+                   urls='http://localhost:9200')
 
     providers = ('localhost',)
 

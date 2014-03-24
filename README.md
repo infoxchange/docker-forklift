@@ -123,7 +123,7 @@ and `ELASTICSEARCH_INDEX_NAME` (the index to use).
 By default, the localhost is checked for a running instance of Elasticsearch
 and if successful, the current directory name is provided to use as the index.
 
-The following parameters can be overridden: `url`, `index_name`.
+The following parameters can be overridden: `urls`, `index_name`.
 
 ### HTTP Proxy
 
