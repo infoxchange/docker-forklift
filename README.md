@@ -157,34 +157,44 @@ parameter is an array of services the application need, `environment` is a
 dictionary of extra environment variables to provide, `postgresql` overrides
 options for PostgreSQL service, etc.
 
-Every parameter value is searched in the following locations:
+Every parameter value is searched, in order, in the following locations:
 
-* Project configuration file - `forklift.yaml` in the current directory. This
-can be checked into the project's version control system, and typically
-contains the list of services it requires, and possibly other non-sensitive
-parameters.
-* User configuration file in `forklift/_default.yaml` inside the
-[XDG configuration directory][xdg] (usually `$HOME/.config`). Settings specific
-to the machine setup can be placed here, for example, if the local PostgreSQL
-database server runs on port 5433, this file can contain:
+* Command line, e.g. `--driver direct` or `--postgres.port 5433` (note the
+nested parameter syntax).
+* User per-project configuration file in `forklift/PROJECT.yaml` inside the
+[XDG configuration directory][xdg] (usually `$HOME/.config`), where
+`PROJECT` is the base name of the current directory.
+* Global user configuration file in `forklift/_default.yaml` in the same
+directory.
+* Project configuration file - `forklift.yaml` in the current directory.
+
+The project configuration file is a place to store settings which the project
+always needs, such as a list of required services, and is intended to be
+checked into the version control system. (As such, the sensitive settings such
+as passwords should not go here.) For example, a project depending on a
+database might have:
+
+    services:
+      - postgres
+
+User configuration files allow people to override project settings to adapt it
+to their local setup. For example, if the PostgreSQL database server on a
+particular machine runs on port 5433, the `_default.yaml` can contain:
 
     postgres:
       port: 5433
 
-* User per-project configuration file in `forklift/PROJECT.yaml`, where
-`PROJECT` is the base name of the current directory, inside the same
-configuration directory. An exotic setting only a specific project needs can
-be overridden here, for example:
+This setting will be applied to all projects which are run through Forklift,
+as long as they use a PostgreSQL database. An exotic setting only a specific
+project needs can be overridden in a per-project user configuration file, for
+example, `foo.yaml`:
 
     environment:
-      # Only this project needs this other database connection
-      DB_ANOTHER_URL: postgres://alice:rabbit@test.server/test_db
+      # Only foo project needs this other database connection
+      DB_ANOTHER_URL: postgres://alice:rabbit@test.server/foo_test_db
 
-* Command line, e.g. `--driver direct` or `--postgres.port 5433` (note the
-nested parameter syntax).
-
-If a setting is present in more than one place, the last one as per above order
-is used.
+Finally, the command line options can be used to quickly alter settings while
+developing.
 
 [dj-database-url]: https://github.com/kennethreitz/dj-database-url
 [xdg]: http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
