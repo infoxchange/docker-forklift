@@ -161,17 +161,40 @@ Every parameter value is searched, in order, in the following locations:
 
 * Command line, e.g. `--driver direct` or `--postgres.port 5433` (note the
 nested parameter syntax).
-* User configuration file in `forklift/PROJECT.yaml`, where `PROJECT` is the
-base name of the current directory, inside the
-[XDG configuration directory][xdg] (usually `$HOME/.config`).
+* User per-project configuration file in `forklift/PROJECT.yaml` inside the
+[XDG configuration directory][xdg] (usually `$HOME/.config`), where
+`PROJECT` is the base name of the current directory.
+* Global user configuration file in `forklift/_default.yaml` in the same
+directory.
 * Project configuration file - `forklift.yaml` in the current directory.
 
-This allows granular overriding of the (hopefully useful) Forklift defaults.
-For example, if the local database requires a password, it can be stored
-in a local configuration file, e.g. `$HOME/.config/forklift/myapp.yaml`:
+The project configuration file is a place to store settings which the project
+always needs, such as a list of required services, and is intended to be
+checked into the version control system. (As such, the sensitive settings such
+as passwords should not go here.) For example, a project depending on a
+database might have:
+
+    services:
+      - postgres
+
+User configuration files allow people to override project settings to adapt it
+to their local setup. For example, if the PostgreSQL database server on a
+particular machine runs on port 5433, the `_default.yaml` can contain:
 
     postgres:
-      password: l@m3password
+      port: 5433
+
+This setting will be applied to all projects which are run through Forklift,
+as long as they use a PostgreSQL database. An exotic setting only a specific
+project needs can be overridden in a per-project user configuration file, for
+example, `foo.yaml`:
+
+    environment:
+      # Only foo project needs this other database connection
+      DB_ANOTHER_URL: postgres://alice:rabbit@test.server/foo_test_db
+
+Finally, the command line options can be used to quickly alter settings while
+developing.
 
 [dj-database-url]: https://github.com/kennethreitz/dj-database-url
 [xdg]: http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
