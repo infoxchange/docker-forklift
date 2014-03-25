@@ -23,7 +23,7 @@ from sys import version_info
 assert version_info >= (3,), "Python 3 is required."
 
 setup(
-    name='forklift',
+    name='docker-forklift',
     version='0.2',
     description='Utility for running a container',
     author='Infoxchange Australia development team',
