@@ -14,11 +14,11 @@ original command, so that one can run arbitary commands inside.
 Installation
 ------------
 
-    sudo pip install .
+    sudo pip install docker-forklift
 
 Or in a virtualenv:
 
-    pip install .
+    pip install docker-forklift
 
 Warning: Forklift requires Python 3, and you should use the corresponding `pip`
 to install, for example, `pip-3.2` on Debian and `pip3` on Ubuntu
