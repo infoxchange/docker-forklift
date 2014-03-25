@@ -833,11 +833,12 @@ class Forklift(object):
         'docker': Docker,
     }
 
+    CONFIG_DIR = os.path.join(xdg_config_home, 'forklift')
+
     configuration_files = (
         'forklift.yaml',
-        os.path.join(xdg_config_home,
-                     'forklift',
-                     '{0}.yaml'.format(application_id())),
+        os.path.join(CONFIG_DIR, '_default.yaml'),
+        os.path.join(CONFIG_DIR, '{0}.yaml'.format(application_id())),
     )
 
     def __init__(self, argv):
@@ -848,6 +849,7 @@ class Forklift(object):
         # Parse the configuration from:
         # - project configuration file
         # - user configuration file
+        # - user per-project configuration file
         # - command line
 
         self.conf = {}

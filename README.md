@@ -157,21 +157,34 @@ parameter is an array of services the application need, `environment` is a
 dictionary of extra environment variables to provide, `postgresql` overrides
 options for PostgreSQL service, etc.
 
-Every parameter value is searched, in order, in the following locations:
+Every parameter value is searched in the following locations:
+
+* Project configuration file - `forklift.yaml` in the current directory. This
+can be checked into the project's version control system, and typically
+contains the list of services it requires, and possibly other non-sensitive
+parameters.
+* User configuration file in `forklift/_default.yaml` inside the
+[XDG configuration directory][xdg] (usually `$HOME/.config`). Settings specific
+to the machine setup can be placed here, for example, if the local PostgreSQL
+database server runs on port 5433, this file can contain:
+
+    postgres:
+      port: 5433
+
+* User per-project configuration file in `forklift/PROJECT.yaml`, where
+`PROJECT` is the base name of the current directory, inside the same
+configuration directory. An exotic setting only a specific project needs can
+be overridden here, for example:
+
+    environment:
+      # Only this project needs this other database connection
+      DB_ANOTHER_URL: postgres://alice:rabbit@test.server/test_db
 
 * Command line, e.g. `--driver direct` or `--postgres.port 5433` (note the
 nested parameter syntax).
-* User configuration file in `forklift/PROJECT.yaml`, where `PROJECT` is the
-base name of the current directory, inside the
-[XDG configuration directory][xdg] (usually `$HOME/.config`).
-* Project configuration file - `forklift.yaml` in the current directory.
 
-This allows granular overriding of the (hopefully useful) Forklift defaults.
-For example, if the local database requires a password, it can be stored
-in a local configuration file, e.g. `$HOME/.config/forklift/myapp.yaml`:
-
-    postgres:
-      password: l@m3password
+If a setting is present in more than one place, the last one as per above order
+is used.
 
 [dj-database-url]: https://github.com/kennethreitz/dj-database-url
 [xdg]: http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
