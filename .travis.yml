@@ -9,3 +9,10 @@ before_install:
 script:
     - .githooks/pre-commit -f
     - python setup.py test
+deploy:
+    provider: pypi
+    user: ixa
+    password:
+        secure: KotqwXcFnooWKlSp1jM98898loE9ugWpba7tXGcDFuHhXQGT/wXtNgzROa2EhPxs7IYfQtxq4HD3dadYSziuUzHRTTjg5YUiW9Gx4N0gFtfthraroKu4IB62B9k84YPmxIIZZNvkJOSd1Ip5x2/+TJntPcroi0UK4GFRhLmcOKM=
+    on:
+        branch: release
