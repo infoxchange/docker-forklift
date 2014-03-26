@@ -902,13 +902,21 @@ class Forklift(object):
 
         return (args, kwargs)
 
+    @staticmethod
+    def _readme_stream():
+        """
+        Get the README file as a stream.
+        """
+
+        from pkg_resources import resource_stream
+        return resource_stream(__name__, 'README.md')
+
     def help(self):
         """
         Render the help file.
         """
 
-        from pkg_resources import resource_stream
-        readme = resource_stream(__name__, 'README.md')
+        readme = self._readme_stream()
 
         # Try to format the README nicely if Pandoc is installed
         try:
@@ -920,7 +928,7 @@ class Forklift(object):
 
         process = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE)
         process.communicate(input=readme.read())
-        process.stdin.close()
+        readme.close()
         process.wait()
 
     def main(self):
