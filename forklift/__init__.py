@@ -918,7 +918,10 @@ class Forklift(object):
         except OSError:
             pager = os.environ.get('PAGER', 'more')
 
-        subprocess.check_call(pager, shell=True, stdin=readme)
+        process = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE)
+        process.communicate(input=readme.read())
+        process.stdin.close()
+        process.wait()
 
     def main(self):
         """
