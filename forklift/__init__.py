@@ -25,7 +25,9 @@ import subprocess
 import sys
 import time
 import yaml
+# pylint:disable=no-name-in-module,import-error
 from distutils.spawn import find_executable
+# pylint:enable=no-name-in-module,import-error
 
 from xdg.BaseDirectory import xdg_config_home
 
@@ -167,6 +169,8 @@ class Forklift(object):
             'less',
             'more',
         ]
+
+        pager = None
 
         for pager in pagers:
             if find_executable(pager.split(' ')[0]):
