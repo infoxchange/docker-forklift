@@ -51,6 +51,6 @@ class ImproperlyConfigured(Exception):
 
 try:
     import subprocess
-    DEVNULL = subprocess.DEVNULL  # pylint:disable=no-name-in-module
+    DEVNULL = subprocess.DEVNULL  # pylint:disable=no-member
 except AttributeError:
     DEVNULL = open(os.devnull)
