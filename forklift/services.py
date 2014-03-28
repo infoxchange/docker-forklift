@@ -184,10 +184,11 @@ class ElasticsearchService(Service):
     Elasticsearch service for the application.
     """
 
-    allow_override = ('index_name', 'urls')
+    allow_override = ('index_name', 'host', 'urls')
 
     def __init__(self, index_name, urls):
         self.index_name = index_name
+        self.url_array = []
         self.urls = urls
 
     def environment(self):
@@ -199,6 +200,46 @@ class ElasticsearchService(Service):
             'ELASTICSEARCH_INDEX_NAME': self.index_name,
             'ELASTICSEARCH_URLS': self.urls,
         }
+
+    @property
+    def urls(self):
+        """
+        The (pipe separated) URLs to access Elasticsearch at.
+        """
+
+        return '|'.join(url.geturl() for url in self.url_array)
+
+    @urls.setter
+    def urls(self, urls):
+        """
+        Set the URLs to access Elasticsearch at.
+        """
+
+        self.url_array = [
+            urllib.parse.urlparse(url)
+            for url in urls.split('|')
+        ]
+
+    @property
+    def host(self):
+        """
+        The (pipe separated) hosts for the Elasticsearch service.
+        """
+
+        return '|'.join(url.hostname for url in self.url_array)
+
+    @host.setter
+    def host(self, host):
+        """
+        Set the host to access Elasticsearch at.
+        """
+
+        self.url_array = [
+            # pylint:disable=protected-access
+            url._replace(
+                netloc='{host}:{port}'.format(host=host, port=url.port))
+            for url in self.url_array
+        ]
 
     def available(self):
         """
