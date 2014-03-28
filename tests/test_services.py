@@ -14,227 +14,51 @@
 # limitations under the License.
 
 """
-Tests for Forklift.
+Tests for services provided by Forklift.
 """
 
-import contextlib
-import tempfile
-import yaml
+import unittest
 
-from tests.base import (
-    docker,
-    DOCKER_BASE_IMAGE,
-    SaveOutputMixin,
-    TestCase,
-)
+from urllib.parse import urlparse
+
+from forklift.services import ElasticsearchService
 
 
-class CommandsMixin(object):
+class ElasticsearchTestCase(unittest.TestCase):
     """
-    Mixin with tests to ensure commands are run correctly.
+    Test Elasticsearch service.
     """
 
-    def run_command(self, *command):
+    def test_host(self):
         """
-        Run a command in Forklift.
-
-        Override to pass extra options.
+        Test host get/set.
         """
 
-        return self.run_forklift('--driver', 'save_output_direct',
-                                 *command)
+        service = ElasticsearchService(
+            'index',
+            'http://alpha:9200|http://beta:9200')
 
-    def test_exit_code(self):
-        """
-        Test command exit codes.
-        """
+        self.assertEqual(service.url_array, [
+            urlparse('http://alpha:9200'),
+            urlparse('http://beta:9200'),
+        ])
+        self.assertEqual(service.host, 'alpha|beta')
 
-        self.assertEqual(0, self.run_command('/bin/true'))
-        self.assertNotEqual(0, self.run_command('/bin/false'))
+        service.host = 'elsewhere'
 
-    def test_output(self):
-        """
-        Test echoing things.
-        """
-
-        self.assertEqual(0, self.run_command('/bin/echo', 'apple', 'orange'))
-        self.assertEqual('apple orange\n', SaveOutputMixin.last_output())
-
+        self.assertEqual(service.url_array, [
+            urlparse('http://elsewhere:9200'),
+            urlparse('http://elsewhere:9200'),
+        ])
         self.assertEqual(
-            0,
-            self.run_command('--', '/bin/echo', '--apple', '--orange')
-        )
-        self.assertEqual('--apple --orange\n', SaveOutputMixin.last_output())
+            service.urls,
+            'http://elsewhere:9200|http://elsewhere:9200')
 
+        service = ElasticsearchService(
+            'index',
+            'http://localhost:9200')
 
-class DirectCommandsTestCase(CommandsMixin, TestCase):
-    """
-    Test running commands directly.
-    """
-
-    pass
-
-
-@docker
-class DockerCommandsTestCase(CommandsMixin, TestCase):
-    """
-    Test running commands via Docker.
-    """
-
-    def run_command(self, *command):
-        """
-        Run a command via Docker.
-        """
-
-        return self.run_forklift(
-            '--driver', 'save_output_docker',
-            '--rm', 'yes',
-            DOCKER_BASE_IMAGE,
-            *command
-        )
-
-
-class CaptureEnvironmentMixin(object):
-    """
-    Mixin with tests to ensure environment is passed to commands correctly.
-    """
-
-    @staticmethod
-    def driver():
-        """
-        The driver to use when running the commands.
-        """
-        raise NotImplementedError("Please override driver().")
-
-    def capture_env(self, *args, prepend_args=None):
-        """
-        Run Forklift to capture the environment.
-        """
-
-        prepend_args = prepend_args or []
-
-        forklift_args = prepend_args + [
-            '--rm', 'yes',  # Only makes sense for Docker, harmless otherwise
-            '--driver', self.driver(),
-            '/usr/bin/env', '-0',
-        ] + list(args)
-
-        self.assertEqual(0, self.run_forklift(*forklift_args))
-
-        output = SaveOutputMixin.last_output()
-        return dict(
-            item.split('=', 1)
-            for item in output.rstrip('\0').split('\0')
-        )
-
-    @contextlib.contextmanager
-    def configuration_file(self, configuration):
-        """
-        Run a command with configuration written to the configuration file.
-        """
-
-        with tempfile.NamedTemporaryFile() as conffile:
-            self.forklift_class.configuration_files.append(conffile.name)
-            yaml.dump(configuration, conffile, encoding='utf-8')
-
-            yield
-
-            self.forklift_class.configuration_files.pop()
-
-    @staticmethod
-    def localhost_reference():
-        """
-        The local host, as seen from inside the driver.
-        """
-        return 'localhost'
-
-    def test_basic_environment(self):
-        """
-        Test passing basic environment to the command.
-        """
-
-        env = self.capture_env()
-        self.assertEqual(env['DEVNAME'], 'myself')
-        self.assertEqual(env['ENVIRONMENT'], 'dev_local')
-        self.assertEqual(env['SITE_PROTOCOL'], 'http')
-        self.assertEqual(env['SITE_DOMAIN'], 'localhost:9999')
-
-    def test_service_environment(self):
-        """
-        Test passing service environment to the command.
-        """
-
-        with self.configuration_file({'services': ['test']}):
-            self.assertEqual(self.capture_env()['FOO'],
-                             '{0}-1-2'.format(self.localhost_reference()))
-
-        with self.configuration_file({
-            'services': ['test'],
-            'test': {
-                'one': '111',
-            },
-        }):
-            self.assertEqual(self.capture_env()['FOO'],
-                             '{0}-111-2'.format(self.localhost_reference()))
-
-            with self.configuration_file({
-                'test': {
-                    'two': '222',
-                },
-            }):
-                self.assertEqual(
-                    self.capture_env()['FOO'],
-                    '{0}-111-222'.format(self.localhost_reference()))
-
-                self.assertEqual(
-                    self.capture_env('--test.host', 'otherhost')['FOO'],
-                    'otherhost-111-222'
-                )
-
-    def test_added_environment(self):
-        """
-        Test passing additional environment to the command.
-        """
-
-        with self.configuration_file({
-            'environment': {
-                'BAR': 'additional',
-            },
-        }):
-            self.assertEqual(self.capture_env()['BAR'], 'additional')
-
-
-class DirectEnvironmentTestCase(CaptureEnvironmentMixin, TestCase):
-    """
-    Test that environment is passed to the commands using direct driver.
-    """
-
-    @staticmethod
-    def driver():
-        return 'save_output_direct'
-
-
-@docker
-class DockerEnvironmentTestCase(CaptureEnvironmentMixin, TestCase):
-    """
-    Test environment passed to the commands using Docker.
-    """
-
-    @staticmethod
-    def driver():
-        return 'save_output_docker'
-
-    @staticmethod
-    def localhost_reference():
-        # TODO: Can this change?
-        return '172.17.42.1'
-
-    def capture_env(self, *args, prepend_args=None):
-        """
-        Run Forklift to capture the environment.
-        """
-
-        prepend_args = prepend_args or []
-        prepend_args.append(DOCKER_BASE_IMAGE)
-
-        return super().capture_env(*args, prepend_args=prepend_args)
+        self.assertEqual(service.url_array, [
+            urlparse('http://localhost:9200'),
+        ])
+        self.assertEqual(service.host, 'localhost')

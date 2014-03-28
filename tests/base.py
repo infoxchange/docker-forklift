@@ -29,6 +29,8 @@ except ImportError:
     DEVNULL = open(os.devnull)
 
 import forklift
+import forklift.drivers
+import forklift.services
 
 
 DOCKER_AVAILABLE = False
@@ -54,7 +56,7 @@ def merge_dicts(*dicts):
     return dict(reduce(operator.or_, (d.items() for d in dicts)))
 
 
-class TestService(forklift.Service):
+class TestService(forklift.services.Service):
     """
     A test service.
     """
@@ -86,7 +88,7 @@ class TestService(forklift.Service):
         return cls('localhost', '1', '2')
 
 
-class TestDriver(forklift.Driver):
+class TestDriver(forklift.drivers.Driver):
     """
     Mock some driver parameters for ease of testing.
     """
@@ -104,7 +106,7 @@ class TestDriver(forklift.Driver):
         return False
 
 
-class SaveOutputMixin(forklift.Driver):
+class SaveOutputMixin(forklift.drivers.Driver):
     """
     A mixin to drivers to examine the commands output.
     """
@@ -129,7 +131,7 @@ class SaveOutputMixin(forklift.Driver):
         return retcode
 
 
-class SaveOutputDirect(SaveOutputMixin, TestDriver, forklift.Direct):
+class SaveOutputDirect(SaveOutputMixin, TestDriver, forklift.drivers.Direct):
     """
     A direct driver augmented for testing.
     """
@@ -137,7 +139,7 @@ class SaveOutputDirect(SaveOutputMixin, TestDriver, forklift.Direct):
     pass
 
 
-class SaveOutputDocker(SaveOutputMixin, TestDriver, forklift.Docker):
+class SaveOutputDocker(SaveOutputMixin, TestDriver, forklift.drivers.Docker):
     """
     A Docker driver augmented for testing.
     """

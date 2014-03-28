@@ -28,10 +28,10 @@ from tests.base import (
     TestForklift,
 )
 
-import forklift
+from forklift.drivers import Docker
 
 
-class SaveSSHDetailsDocker(forklift.Docker):
+class SaveSSHDetailsDocker(Docker):
     """
     Save SSH command the container ran.
     """
