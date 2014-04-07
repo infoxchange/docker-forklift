@@ -23,7 +23,7 @@ import socket
 import subprocess
 import urllib.request
 
-from forklift.base import application_id, free_port, ImproperlyConfigured
+from forklift.base import free_port, ImproperlyConfigured
 
 
 def port_open(host, port):
@@ -52,7 +52,7 @@ class Service(object):
     allow_override = ()
 
     @classmethod
-    def provide(cls, overrides=None):
+    def provide(cls, application_id, overrides=None):
         """
         Choose the first available service from the list of providers.
         """
@@ -60,7 +60,7 @@ class Service(object):
         overrides = overrides or {}
 
         for provider in cls.providers:
-            service = getattr(cls, provider)()
+            service = getattr(cls, provider)(application_id)
 
             for key, value in overrides.items():
                 if key in cls.allow_override:
@@ -157,13 +157,13 @@ class PostgreSQLService(Service):
             return False
 
     @classmethod
-    def localhost(cls):
+    def localhost(cls, application_id):
         """
         The PostgreSQL environment on the local machine.
         """
         return cls(host='localhost',
-                   name=application_id(),
-                   user=application_id(),
+                   name=application_id,
+                   user=application_id,
                    )
 
     providers = ('localhost',)
@@ -262,11 +262,11 @@ class ElasticsearchService(Service):
         return True
 
     @classmethod
-    def localhost(cls):
+    def localhost(cls, application_id):
         """
         The Elasticsearch environment on the local machine.
         """
-        return cls(index_name=application_id(),
+        return cls(index_name=application_id,
                    urls='http://localhost:9200')
 
     providers = ('localhost',)
@@ -305,8 +305,9 @@ class ProxyService(Service):
         else:
             return {}
 
+    # pylint:disable=unused-argument
     @classmethod
-    def manual(cls):
+    def manual(cls, application_id):
         """
         Manually-configured proxy. Will not be available unless parameters
         are overridden in configuration.
@@ -345,8 +346,9 @@ class EmailService(Service):
 
         return port_open(self.host, self.port)
 
+    # pylint:disable=unused-argument
     @classmethod
-    def localhost(cls):
+    def localhost(cls, application_id):
         """
         The MTA on the local machine.
         """
@@ -396,8 +398,9 @@ class SyslogService(Service):
         else:
             return port_open(self.host, self.port)
 
+    # pylint:disable=unused-argument
     @classmethod
-    def manual(cls):
+    def manual(cls, application_id):
         """
         Manually-configured syslog. Will not be available unless parameters
         are overridden in configuration.
@@ -405,8 +408,9 @@ class SyslogService(Service):
 
         return cls()
 
+    # pylint:disable=unused-argument
     @classmethod
-    def stdout(cls):
+    def stdout(cls, application_id):
         """
         Logger printing all the messages to the standard output of Forklift.
         """

@@ -81,11 +81,11 @@ class TestService(forklift.services.Service):
     providers = ('here',)
 
     @classmethod
-    def here(cls):
+    def here(cls, application_id):
         """
         A sample provider.
         """
-        return cls('localhost', '1', '2')
+        return cls('localhost', application_id, '2')
 
 
 class TestDriver(forklift.drivers.Driver):
@@ -160,7 +160,21 @@ class TestForklift(forklift.Forklift):
     services = merge_dicts({'test': TestService},
                            forklift.Forklift.services)
 
-    configuration_files = []
+    configuration_file_list = []
+
+    def configuration_files(self):
+        """
+        Override the configuration files.
+        """
+        return self.configuration_file_list
+
+    def implicit_configuration(self):
+        """
+        Override application ID.
+        """
+        return {
+            'application_id': 'test_app',
+        }
 
 
 class TestCase(unittest.TestCase):

@@ -134,12 +134,13 @@ class CaptureEnvironmentMixin(object):
         """
 
         with tempfile.NamedTemporaryFile() as conffile:
-            self.forklift_class.configuration_files.append(conffile.name)
+            self.forklift_class.configuration_file_list.append(conffile.name)
             yaml.dump(configuration, conffile, encoding='utf-8')
 
-            yield
-
-            self.forklift_class.configuration_files.pop()
+            try:
+                yield
+            finally:
+                self.forklift_class.configuration_file_list.pop()
 
     @staticmethod
     def localhost_reference():
@@ -165,8 +166,9 @@ class CaptureEnvironmentMixin(object):
         """
 
         with self.configuration_file({'services': ['test']}):
-            self.assertEqual(self.capture_env()['FOO'],
-                             '{0}-1-2'.format(self.localhost_reference()))
+            self.assertEqual(
+                self.capture_env()['FOO'],
+                '{0}-test_app-2'.format(self.localhost_reference()))
 
         with self.configuration_file({
             'services': ['test'],
