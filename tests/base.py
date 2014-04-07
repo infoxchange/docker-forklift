@@ -168,6 +168,14 @@ class TestForklift(forklift.Forklift):
         """
         return self.configuration_file_list
 
+    def implicit_configuration(self):
+        """
+        Override application ID.
+        """
+        return {
+            'application_id': 'test_app',
+        }
+
 
 class TestCase(unittest.TestCase):
     """
