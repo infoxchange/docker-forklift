@@ -165,8 +165,9 @@ class CaptureEnvironmentMixin(object):
         """
 
         with self.configuration_file({'services': ['test']}):
-            self.assertEqual(self.capture_env()['FOO'],
-                             '{0}-1-2'.format(self.localhost_reference()))
+            self.assertEqual(
+                self.capture_env()['FOO'],
+                '{0}-forklift-2'.format(self.localhost_reference()))
 
         with self.configuration_file({
             'services': ['test'],

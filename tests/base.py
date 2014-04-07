@@ -81,11 +81,11 @@ class TestService(forklift.services.Service):
     providers = ('here',)
 
     @classmethod
-    def here(cls):
+    def here(cls, application_id):
         """
         A sample provider.
         """
-        return cls('localhost', '1', '2')
+        return cls('localhost', application_id, '2')
 
 
 class TestDriver(forklift.drivers.Driver):

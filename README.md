@@ -99,6 +99,12 @@ accessible to the outside world if it listens on port 8000 locally.
 * All variables under `environment` (e.g. `environment.FOO` will be passed in
 as `FOO`).
 
+Most of the services which provide per-application resources (e.g. a database)
+need to distinguish between different applications running on the same host.
+To do that, they are supplied with an application ID, which defaults to the
+base name of the current directory. If needed, this can be overridden in the
+configuration by the key `application_id`.
+
 The services to provide to the application are taken from the `services` array
 in the configuration file. The following services are known to Forklift:
 
@@ -109,7 +115,7 @@ contains a [Database URL][dj-database-url] for the application to use.
 
 By default, Forklift checks if there is a PostgreSQL server running on the
 machine, and if yes, provides the application with its details, taking the
-current directory name for the database name.
+application ID for the database name.
 
 The following parameters can be overridden: `host`, `port`, `user`, `password`,
 `name`.
@@ -121,7 +127,7 @@ Provides an URL to access Elasticsearch at as environment variables
 and `ELASTICSEARCH_INDEX_NAME` (the index to use).
 
 By default, the localhost is checked for a running instance of Elasticsearch
-and if successful, the current directory name is provided to use as the index.
+and if successful, the application ID is provided to use as the index name.
 
 The following parameters can be overridden: `urls`, `index_name`.
 
@@ -163,7 +169,7 @@ Every parameter value is searched, in order, in the following locations:
 nested parameter syntax).
 * User per-project configuration file in `forklift/PROJECT.yaml` inside the
 [XDG configuration directory][xdg] (usually `$HOME/.config`), where
-`PROJECT` is the base name of the current directory.
+`PROJECT` is the application ID.
 * Global user configuration file in `forklift/_default.yaml` in the same
 directory.
 * Project configuration file - `forklift.yaml` in the current directory.

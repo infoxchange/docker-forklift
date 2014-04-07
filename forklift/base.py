@@ -21,17 +21,6 @@ import os
 import socket
 
 
-def application_id():
-    """
-    A string which identifies the application.
-
-    Use to avoid conflicts between services for different applications.
-    """
-
-    # TODO: get something from the image name
-    return os.path.basename(os.path.abspath(os.curdir))
-
-
 def free_port():
     """
     Find a free TCP port.

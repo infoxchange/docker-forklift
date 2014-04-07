@@ -29,7 +29,7 @@ import yaml
 from xdg.BaseDirectory import xdg_config_home
 
 
-from forklift.base import application_id, DEVNULL, ImproperlyConfigured
+from forklift.base import DEVNULL, ImproperlyConfigured
 import forklift.drivers
 import forklift.services
 
@@ -70,31 +70,48 @@ class Forklift(object):
 
     CONFIG_DIR = os.path.join(xdg_config_home, 'forklift')
 
-    configuration_files = (
-        'forklift.yaml',
-        os.path.join(CONFIG_DIR, '_default.yaml'),
-        os.path.join(CONFIG_DIR, '{0}.yaml'.format(application_id())),
-    )
-
     def __init__(self, argv):
         """
         Parse the command line and set up the class.
         """
 
         # Parse the configuration from:
+        # - implicit defaults
         # - project configuration file
         # - user configuration file
         # - user per-project configuration file
         # - command line
 
-        self.conf = {}
+        self.conf = self.implicit_configuration()
 
-        for conffile in self.configuration_files:
+        for conffile in self.configuration_files():
             self.conf = dict_deep_merge(self.conf,
                                         self.file_configuration(conffile))
 
         (self.args, kwargs) = self.command_line_configuration(argv)
         self.conf = dict_deep_merge(self.conf, kwargs)
+
+    def implicit_configuration(self):
+        """
+        Implicit configuration based on the current directory.
+        """
+
+        application_id = os.path.basename(os.path.abspath(os.curdir))
+        return {
+            'application_id': application_id,
+        }
+
+    def configuration_files(self):
+        """
+        A list of configuration files to look for settings in.
+        """
+
+        application_id = self.conf['application_id']
+        return (
+            'forklift.yaml',
+            os.path.join(self.CONFIG_DIR, '_default.yaml'),
+            os.path.join(self.CONFIG_DIR, '{0}.yaml'.format(application_id)),
+        )
 
     def file_configuration(self, name):
         """
@@ -189,7 +206,10 @@ class Forklift(object):
         try:
             required_services = self.conf.get('services', [])
             services = [
-                self.services[service].provide(self.conf.get(service))
+                self.services[service].provide(
+                    self.conf['application_id'],
+                    self.conf.get(service)
+                )
                 for service in required_services
             ]
 
