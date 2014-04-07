@@ -160,7 +160,13 @@ class TestForklift(forklift.Forklift):
     services = merge_dicts({'test': TestService},
                            forklift.Forklift.services)
 
-    configuration_files = []
+    configuration_file_list = []
+
+    def configuration_files(self):
+        """
+        Override the configuration files.
+        """
+        return self.configuration_file_list
 
 
 class TestCase(unittest.TestCase):

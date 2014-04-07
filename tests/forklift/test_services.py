@@ -134,12 +134,13 @@ class CaptureEnvironmentMixin(object):
         """
 
         with tempfile.NamedTemporaryFile() as conffile:
-            self.forklift_class.configuration_files.append(conffile.name)
+            self.forklift_class.configuration_file_list.append(conffile.name)
             yaml.dump(configuration, conffile, encoding='utf-8')
 
-            yield
-
-            self.forklift_class.configuration_files.pop()
+            try:
+                yield
+            finally:
+                self.forklift_class.configuration_file_list.pop()
 
     @staticmethod
     def localhost_reference():
