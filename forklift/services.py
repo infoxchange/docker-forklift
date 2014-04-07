@@ -305,8 +305,9 @@ class ProxyService(Service):
         else:
             return {}
 
+    # pylint:disable=unused-argument
     @classmethod
-    def manual(cls, application_id):  # pylint:disable=unused-argument
+    def manual(cls, application_id):
         """
         Manually-configured proxy. Will not be available unless parameters
         are overridden in configuration.
@@ -345,8 +346,9 @@ class EmailService(Service):
 
         return port_open(self.host, self.port)
 
+    # pylint:disable=unused-argument
     @classmethod
-    def localhost(cls, application_id):  # pylint:disable=unused-argument
+    def localhost(cls, application_id):
         """
         The MTA on the local machine.
         """
@@ -396,8 +398,9 @@ class SyslogService(Service):
         else:
             return port_open(self.host, self.port)
 
+    # pylint:disable=unused-argument
     @classmethod
-    def manual(cls, application_id):  # pylint:disable=unused-argument
+    def manual(cls, application_id):
         """
         Manually-configured syslog. Will not be available unless parameters
         are overridden in configuration.
@@ -405,8 +408,9 @@ class SyslogService(Service):
 
         return cls()
 
+    # pylint:disable=unused-argument
     @classmethod
-    def stdout(cls, application_id):  # pylint:disable=unused-argument
+    def stdout(cls, application_id):
         """
         Logger printing all the messages to the standard output of Forklift.
         """
