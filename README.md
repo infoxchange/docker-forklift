@@ -60,6 +60,9 @@ To override the choice, set `driver` parameter to either `docker` or `direct`.
 
 Docker driver has specific parameters:
 
+* `serve_port` - Services that the container runs on port 8000,
+eg the container running a web server, will be available on this
+port locally
 * `rm`: Automatically remove containers after they've stopped.
 * `privileged`: Run containers in privileged mode.
 * `interactive`: Run containers in interactive mode (`-i -t`).
