@@ -21,6 +21,7 @@ import contextlib
 import tempfile
 import yaml
 
+from forklift.drivers import ip_address
 from tests.base import (
     docker,
     DOCKER_BASE_IMAGE,
@@ -229,7 +230,7 @@ class DockerEnvironmentTestCase(CaptureEnvironmentMixin, TestCase):
     @staticmethod
     def localhost_reference():
         # TODO: Can this change?
-        return '172.17.42.1'
+        return ip_address('docker0')
 
     def capture_env(self, *args, prepend_args=None):
         """

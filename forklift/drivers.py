@@ -18,9 +18,12 @@ Drivers that can execute applications.
 """
 
 
+import fcntl
 import json
 import os
 import pwd
+import socket
+import struct
 import subprocess
 import time
 
@@ -120,6 +123,19 @@ class Driver(object):
         print('http://localhost:{0}'.format(self.serve_port()))
 
 
+def ip_address(ifname):
+    """
+    Get the IP address associated with an interface.
+    """
+
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as tmp_socket:
+        return socket.inet_ntoa(fcntl.ioctl(
+            tmp_socket.fileno(),
+            0x8915,  # SIOCGIFADDR
+            struct.pack('256s', ifname[:15].encode())
+        )[20:24])
+
+
 class Docker(Driver):
     """
     Execute the application packaged as a Docker container.
@@ -159,7 +175,7 @@ class Docker(Driver):
         for service in self.services:
             if 'host' in service.allow_override:
                 if service.host == 'localhost':
-                    service.host = '172.17.42.1'
+                    service.host = ip_address('docker0')
 
         return super().environment()
 
