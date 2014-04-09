@@ -192,6 +192,7 @@ class MemcacheService(Service):
     """
 
     allow_override = ('key_prefix', 'hosts')
+    providers = ('localhost',)
 
     def __init__(self,
                  key_prefix='',
@@ -230,6 +231,15 @@ class MemcacheService(Service):
                 return True
 
         return False
+
+    @classmethod
+    def localhost(cls, application_id):
+        """
+        The default memcached provider
+        """
+
+        return cls(key_prefix=application_id,
+                   hosts=['localhost:11211'])
 
 
 @register('elasticsearch')
