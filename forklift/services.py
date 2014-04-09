@@ -179,6 +179,52 @@ class PostGISService(PostgreSQLService):
     CHECK_COMMAND = 'select PostGIS_full_version()'
 
 
+class MemcacheService(Service):
+    """
+    Memcache service for the application.
+    """
+
+    allow_override = ('key_prefix', 'hosts')
+
+    def __init__(self,
+                 key_prefix='',
+                 hosts=None):
+
+        self.key_prefix = key_prefix
+        self.hosts = hosts or []
+
+    def environment(self):
+        """
+        The environment to access Memcache
+        """
+
+        return {
+            'MEMCACHE_HOSTS': '|'.join(self.hosts),
+            'MEMCACHE_PREFIX': self.key_prefix,
+        }
+
+    def available(self):
+        """
+        Check whether memcache is available
+
+        Do this by connecting to the socket. At least one host must be up
+        """
+
+        if not self.hosts:
+            return False
+
+        for host in self.hosts:
+            try:
+                host, port = host.split(':', 1)
+            except ValueError:
+                port = 11211
+
+            if port_open(host, port):
+                return True
+
+        return False
+
+
 class ElasticsearchService(Service):
     """
     Elasticsearch service for the application.
