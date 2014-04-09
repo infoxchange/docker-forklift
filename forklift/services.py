@@ -235,7 +235,7 @@ class MemcacheService(Service):
     @property
     def host(self):
         """
-        The (pipe separated) hosts for the Elasticsearch service.
+        The (pipe separated) hosts for the Memcache service.
         """
 
         return '|'.join(self.hosts)
@@ -243,7 +243,7 @@ class MemcacheService(Service):
     @host.setter
     def host(self, host):
         """
-        Set the host to access Elasticsearch at.
+        Set the host to access Memcache at.
         """
 
         self.hosts = host.split('|')

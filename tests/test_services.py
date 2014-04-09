@@ -88,6 +88,11 @@ class ServicesAPITestCase(unittest.TestCase):
             service = getattr(cls, cls.providers[0])('test-app')
 
             # assert we can set the host
+            #
+            # Only the Docker driver uses the host property, and it is
+            # currently optional. However this test is useful because the
+            # property is useful. If it turns out there are services for
+            # which host is not useful, then this test should be changed :)
             assert hasattr(service, 'host')
             service.host = 'badger'
 
