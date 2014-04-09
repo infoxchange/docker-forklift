@@ -232,6 +232,22 @@ class MemcacheService(Service):
 
         return False
 
+    @property
+    def host(self):
+        """
+        The (pipe separated) hosts for the Elasticsearch service.
+        """
+
+        return '|'.join(self.hosts)
+
+    @host.setter
+    def host(self, host):
+        """
+        Set the host to access Elasticsearch at.
+        """
+
+        self.hosts = host.split('|')
+
     @classmethod
     def localhost(cls, application_id):
         """
