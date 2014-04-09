@@ -54,19 +54,8 @@ class Forklift(object):
     The main class.
     """
 
-    services = {
-        'postgres': forklift.services.PostgreSQLService,
-        'postgis': forklift.services.PostGISService,
-        'elasticsearch': forklift.services.ElasticsearchService,
-        'proxy': forklift.services.ProxyService,
-        'email': forklift.services.EmailService,
-        'syslog': forklift.services.SyslogService,
-    }
-
-    drivers = {
-        'direct': forklift.drivers.Direct,
-        'docker': forklift.drivers.Docker,
-    }
+    services = forklift.services.register
+    drivers = forklift.drivers.register
 
     CONFIG_DIR = os.path.join(xdg_config_home, 'forklift')
 

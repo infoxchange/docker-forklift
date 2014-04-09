@@ -24,6 +24,7 @@ import subprocess
 import urllib.request
 
 from forklift.base import free_port, ImproperlyConfigured
+from forklift.registry import Registry
 
 
 def port_open(host, port):
@@ -37,6 +38,9 @@ def port_open(host, port):
             return True
         except socket.error:
             return False
+
+
+register = Registry()  # pylint:disable=invalid-name
 
 
 class Service(object):
@@ -94,6 +98,7 @@ class Service(object):
         raise NotImplementedError("Please override environment().")
 
 
+@register('postgres')
 class PostgreSQLService(Service):
     """
     PostgreSQL service provided by the host machine.
@@ -169,6 +174,7 @@ class PostgreSQLService(Service):
     providers = ('localhost',)
 
 
+@register('postgis')
 class PostGISService(PostgreSQLService):
     """
     PostgreSQL database with PostGIS support.
@@ -179,6 +185,7 @@ class PostGISService(PostgreSQLService):
     CHECK_COMMAND = 'select PostGIS_full_version()'
 
 
+@register('memcache')
 class MemcacheService(Service):
     """
     Memcache service for the application.
@@ -225,6 +232,7 @@ class MemcacheService(Service):
         return False
 
 
+@register('elasticsearch')
 class ElasticsearchService(Service):
     """
     Elasticsearch service for the application.
@@ -318,6 +326,7 @@ class ElasticsearchService(Service):
     providers = ('localhost',)
 
 
+@register('proxy')
 class ProxyService(Service):
     """
     Proxy service for the application.
@@ -364,6 +373,7 @@ class ProxyService(Service):
     providers = ('manual',)
 
 
+@register('email')
 class EmailService(Service):
     """
     An MTA for the application.
@@ -403,6 +413,7 @@ class EmailService(Service):
     providers = ('localhost',)
 
 
+@register('syslog')
 class SyslogService(Service):
     """
     Logging facility for the application.
