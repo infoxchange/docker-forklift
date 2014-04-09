@@ -28,6 +28,10 @@ import subprocess
 import time
 
 from forklift.base import DEVNULL, free_port, ImproperlyConfigured
+from forklift.registry import Registry
+
+
+register = Registry()  # pylint:disable=invalid-name
 
 
 class Driver(object):
@@ -136,6 +140,7 @@ def ip_address(ifname):
         )[20:24])
 
 
+@register('docker')
 class Docker(Driver):
     """
     Execute the application packaged as a Docker container.
@@ -379,6 +384,7 @@ class Docker(Driver):
         return (' '.join(ssh_command), available)
 
 
+@register('direct')
 class Direct(Driver):
     """
     Execute the application directly.

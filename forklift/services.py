@@ -24,6 +24,7 @@ import subprocess
 import urllib.request
 
 from forklift.base import free_port, ImproperlyConfigured
+from forklift.registry import Registry
 
 
 def port_open(host, port):
@@ -37,6 +38,9 @@ def port_open(host, port):
             return True
         except socket.error:
             return False
+
+
+register = Registry()  # pylint:disable=invalid-name
 
 
 class Service(object):
@@ -94,6 +98,7 @@ class Service(object):
         raise NotImplementedError("Please override environment().")
 
 
+@register('postgres')
 class PostgreSQLService(Service):
     """
     PostgreSQL service provided by the host machine.
@@ -169,6 +174,7 @@ class PostgreSQLService(Service):
     providers = ('localhost',)
 
 
+@register('postgis')
 class PostGISService(PostgreSQLService):
     """
     PostgreSQL database with PostGIS support.
@@ -179,6 +185,80 @@ class PostGISService(PostgreSQLService):
     CHECK_COMMAND = 'select PostGIS_full_version()'
 
 
+@register('memcache')
+class MemcacheService(Service):
+    """
+    Memcache service for the application.
+    """
+
+    allow_override = ('key_prefix', 'hosts')
+    providers = ('localhost',)
+
+    def __init__(self,
+                 key_prefix='',
+                 hosts=None):
+
+        self.key_prefix = key_prefix
+        self.hosts = hosts or []
+
+    def environment(self):
+        """
+        The environment to access Memcache
+        """
+
+        return {
+            'MEMCACHE_HOSTS': '|'.join(self.hosts),
+            'MEMCACHE_PREFIX': self.key_prefix,
+        }
+
+    def available(self):
+        """
+        Check whether memcache is available
+
+        Do this by connecting to the socket. At least one host must be up
+        """
+
+        if not self.hosts:
+            return False
+
+        for host in self.hosts:
+            try:
+                host, port = host.split(':', 1)
+            except ValueError:
+                port = 11211
+
+            if port_open(host, port):
+                return True
+
+        return False
+
+    @property
+    def host(self):
+        """
+        The (pipe separated) hosts for the Memcache service.
+        """
+
+        return '|'.join(self.hosts)
+
+    @host.setter
+    def host(self, host):
+        """
+        Set the host to access Memcache at.
+        """
+
+        self.hosts = host.split('|')
+
+    @classmethod
+    def localhost(cls, application_id):
+        """
+        The default memcached provider
+        """
+
+        return cls(key_prefix=application_id,
+                   hosts=['localhost:11211'])
+
+
+@register('elasticsearch')
 class ElasticsearchService(Service):
     """
     Elasticsearch service for the application.
@@ -272,6 +352,7 @@ class ElasticsearchService(Service):
     providers = ('localhost',)
 
 
+@register('proxy')
 class ProxyService(Service):
     """
     Proxy service for the application.
@@ -318,6 +399,7 @@ class ProxyService(Service):
     providers = ('manual',)
 
 
+@register('email')
 class EmailService(Service):
     """
     An MTA for the application.
@@ -357,6 +439,7 @@ class EmailService(Service):
     providers = ('localhost',)
 
 
+@register('syslog')
 class SyslogService(Service):
     """
     Logging facility for the application.
