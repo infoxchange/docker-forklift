@@ -89,6 +89,18 @@ When running in SSH daemon mode, Forklift starts the container in the
 background and prints a command to SSH to it. It is up to the user to stop
 the container when no longer needed.
 
+### Recycler
+
+Forklift can clean up old containers and images on your system. By default
+it will clean up all stopped containers, and all untagged images.
+
+Run `forklift recycle`
+
+The following flags can also be passed:
+
+* `--include-running` - also remove running containers
+* `--include-tagged` - also include tagged images
+
 Services and environment
 ------------------------
 
