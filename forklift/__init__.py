@@ -25,6 +25,9 @@ import subprocess
 import sys
 import time
 import yaml
+# pylint:disable=no-name-in-module,import-error
+from distutils.spawn import find_executable
+# pylint:enable=no-name-in-module,import-error
 
 from xdg.BaseDirectory import xdg_config_home
 
@@ -160,12 +163,18 @@ class Forklift(object):
         readme = self._readme_stream()
 
         # Try to format the README nicely if Pandoc is installed
-        try:
-            subprocess.check_call(['pandoc', '-v'],
-                                  stdout=DEVNULL, stderr=DEVNULL)
-            pager = 'pandoc -s -f markdown -t man | man -l -'
-        except OSError:
-            pager = os.environ.get('PAGER', 'more')
+        pagers = [
+            'pandoc -s -f markdown -t man | man -l -',
+            os.environ.get('PAGER', ''),
+            'less',
+            'more',
+        ]
+
+        pager = None
+
+        for pager in pagers:
+            if find_executable(pager.split(' ')[0]):
+                break
 
         process = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE)
         process.communicate(input=readme.read())
