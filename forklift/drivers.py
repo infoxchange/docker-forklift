@@ -22,6 +22,7 @@ import fcntl
 import json
 import os
 import pwd
+import re
 import socket
 import struct
 import subprocess
@@ -166,7 +167,7 @@ class Docker(Driver):
                     "continuing."
                 )
 
-        if list(command) == ['sshd']:
+        if command == ['sshd']:
             return self.run_sshd()
         else:
             command = self.docker_command(*command)
@@ -382,6 +383,88 @@ class Docker(Driver):
             available = False
 
         return (' '.join(ssh_command), available)
+
+
+@register('container_recycler')
+class ContainerRecycler(Driver):
+    """
+    Cleans up Docker's mess
+    """
+
+    def run(self, *command):
+        """
+        Recycle old containers and images
+        """
+
+        self.recycle_containers(include_running='--include-running' in command)
+        self.recycle_images(include_tagged='--include-tagged' in command)
+
+    def recycle_containers(self, include_running=False):
+        """
+        Clean up old stopped (and optionally running) containers
+        """
+        all_containers = set(
+            subprocess.check_output(('docker', 'ps', '-aq'))
+            .split()
+        )
+
+        running_containers = set(
+            subprocess.check_output(('docker', 'ps', '-q'))
+            .split()
+        )
+
+        if include_running:
+            containers = all_containers
+
+        else:
+            if running_containers:
+                print("You have running containers, pass "
+                      "--include-running to remove")
+
+            containers = all_containers - running_containers
+
+        if containers:
+            print("Removing old containers...")
+            subprocess.check_call(('docker', 'rm', '-f') + tuple(containers))
+
+    def recycle_images(self, include_tagged=False):
+        """
+        Clean up untagged (and optionally tagged) images
+        """
+        images = set()
+        tagged_images = set()
+
+        for line in \
+                subprocess.check_output(('docker', 'images'))\
+                .split(b'\n')[1:-1]:
+
+            repo, tag, image = re.match(r'^([^\s]+)\s+'
+                                        r'([^\s]+)\s+'
+                                        r'([^\s]+)'
+                                        r'.*$', line.decode('utf-8')).groups()
+            images.add(image)
+
+            if repo != '<none>' and tag != '<none>':
+                tagged_images.add(image)
+
+        if include_tagged:
+            pass
+
+        else:
+            if tagged_images:
+                print("You have tagged images, pass "
+                      "--include-tagged to remove")
+
+            images -= tagged_images
+
+        if images:
+            print("Removing old images...")
+            subprocess.check_call(('docker', 'rmi') + tuple(images))
+
+    @staticmethod
+    def valid_target(target):
+
+        return target == 'recycle'
 
 
 @register('direct')
