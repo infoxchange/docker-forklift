@@ -437,8 +437,9 @@ class ContainerRecycler(Driver):
         images = set()
         tagged_images = set()
 
-        output = subprocess.check_output(('docker', 'images'))
-        output = output.decode('utf-8').strip().split('\n')
+        output = subprocess.check_output(('docker', 'images'),
+                                         universal_newlines=True)
+        output = output.strip().split('\n')
 
         # the first line contains the offsets
         header = output[0]
