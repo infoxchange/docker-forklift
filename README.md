@@ -89,6 +89,18 @@ When running in SSH daemon mode, Forklift starts the container in the
 background and prints a command to SSH to it. It is up to the user to stop
 the container when no longer needed.
 
+### Recycler
+
+Forklift can clean up old containers and images on your system. By default
+it will clean up all stopped containers, and all untagged images.
+
+Run `forklift recycle`
+
+The following flags can also be passed:
+
+* `--include-running` - also remove running containers
+* `--include-tagged` - also include tagged images
+
 Services and environment
 ------------------------
 
@@ -157,6 +169,17 @@ standard output and provide its address to the application.
 
 The following parameters can be specified: `host`, `port`, `proto` (`tcp` or
 `udp`).
+
+### Memcache
+
+Provides the settings `MEMCACHE_HOSTS`, a pipe-separated list of hosts
+running memcache and `MEMCACHE_PREFIX`, a prefix to use for keys passed
+to memcache.
+
+By default, the localhost is checked for a running instance of Memcache
+and if successful, the application ID is provided to use as the key prefix.
+
+The following parameters can be overridden: `hosts`, `key_prefix`.
 
 Configuration
 -------------

@@ -22,6 +22,7 @@ import fcntl
 import json
 import os
 import pwd
+import re
 import socket
 import struct
 import subprocess
@@ -382,6 +383,98 @@ class Docker(Driver):
             available = False
 
         return (' '.join(ssh_command), available)
+
+
+@register('container_recycler')
+class ContainerRecycler(Driver):
+    """
+    Cleans up Docker's mess
+    """
+
+    def run(self, *command):
+        """
+        Recycle old containers and images
+        """
+
+        include_running = 'include-running' in self.conf
+        include_tagged = 'include-tagged' in self.conf
+
+        self.recycle_containers(include_running=include_running)
+        self.recycle_images(include_tagged=include_tagged)
+
+    def recycle_containers(self, include_running=False):
+        """
+        Clean up old stopped (and optionally running) containers
+        """
+        all_containers = set(
+            subprocess.check_output(('docker', 'ps', '-aq'))
+            .split()
+        )
+
+        running_containers = set(
+            subprocess.check_output(('docker', 'ps', '-q'))
+            .split()
+        )
+
+        if include_running:
+            containers = all_containers
+
+        else:
+            if running_containers:
+                print("You have running containers, pass "
+                      "--include-running to remove")
+
+            containers = all_containers - running_containers
+
+        if containers:
+            print("Removing old containers...")
+            subprocess.check_call(('docker', 'rm', '-f') + tuple(containers))
+
+    def recycle_images(self, include_tagged=False):
+        """
+        Clean up untagged (and optionally tagged) images
+        """
+        images = set()
+        tagged_images = set()
+
+        output = subprocess.check_output(('docker', 'images'),
+                                         universal_newlines=True)
+        output = output.strip().split('\n')
+
+        # the first line contains the offsets
+        (header, *remainder) = output
+
+        # calculate the column widths from the header by calculating the
+        # offsets of the columns
+        columns = [header.index(l)
+                   for l in re.split(r'\s\s+', header)] + [len(header)]
+        columns = [(a, b) for a, b in zip(columns, columns[1:])]
+
+        for line in remainder:
+            repo, tag, image, _, _ = (line[a:b].strip() for a, b in columns)
+            images.add(image)
+
+            if repo != '<none>' and tag != '<none>':
+                tagged_images.add(image)
+
+        if include_tagged:
+            pass
+
+        else:
+            if tagged_images:
+                print("You have tagged images, pass "
+                      "--include-tagged to remove")
+
+            images -= tagged_images
+
+        if images:
+            print("Removing old images...")
+            subprocess.check_call(('docker', 'rmi') + tuple(images))
+
+    @staticmethod
+    def valid_target(target):
+
+        return target == 'recycle'
 
 
 @register('direct')
