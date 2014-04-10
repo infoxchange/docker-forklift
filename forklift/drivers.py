@@ -396,8 +396,11 @@ class ContainerRecycler(Driver):
         Recycle old containers and images
         """
 
-        self.recycle_containers(include_running='--include-running' in command)
-        self.recycle_images(include_tagged='--include-tagged' in command)
+        include_running = '--include-running' in self.conf
+        include_tagged = '--include-tagged' in self.conf
+
+        self.recycle_containers(include_running=include_running)
+        self.recycle_images(include_tagged=include_tagged)
 
     def recycle_containers(self, include_running=False):
         """
