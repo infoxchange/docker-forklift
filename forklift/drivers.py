@@ -167,7 +167,7 @@ class Docker(Driver):
                     "continuing."
                 )
 
-        if command == ['sshd']:
+        if list(command) == ['sshd']:
             return self.run_sshd()
         else:
             command = self.docker_command(*command)
