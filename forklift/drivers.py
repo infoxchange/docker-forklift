@@ -437,14 +437,21 @@ class ContainerRecycler(Driver):
         images = set()
         tagged_images = set()
 
-        for line in \
-                subprocess.check_output(('docker', 'images'))\
-                .split(b'\n')[1:-1]:
+        output = subprocess.check_output(('docker', 'images'))
+        output = output.decode('ascii').strip().split('\n')
 
-            repo, tag, image = re.match(r'^([^\s]+)\s+'
-                                        r'([^\s]+)\s+'
-                                        r'([^\s]+)'
-                                        r'.*$', line.decode('utf-8')).groups()
+        # the first line contains the offsets
+        header = output[0]
+        remainder = output[1:]
+
+        # calculate the column widths from the header by calculating the
+        # offsets of the columns
+        columns = [header.index(l)
+                   for l in re.split(r'\s\s+', header)] + [len(header)]
+        columns = [(a, b) for a, b in zip(columns, columns[1:])]
+
+        for line in remainder:
+            repo, tag, image, _, _ = (line[a:b].strip() for a, b in columns)
             images.add(image)
 
             if repo != '<none>' and tag != '<none>':
