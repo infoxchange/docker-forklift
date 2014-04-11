@@ -43,7 +43,7 @@ passed to the command as environment variables.
 For example, if the project specifies:
 
     services:
-        - postgresql
+        - postgres
 
 Forklift will check if the PostgreSQL server is running on the local machine,
 and pass the database URL to the application.
@@ -186,7 +186,7 @@ Configuration
 
 Forklift has a hierarchy of configuration options. For example, `services`
 parameter is an array of services the application need, `environment` is a
-dictionary of extra environment variables to provide, `postgresql` overrides
+dictionary of extra environment variables to provide, `postgres` overrides
 options for PostgreSQL service, etc.
 
 Every parameter value is searched, in order, in the following locations:
