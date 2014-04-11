@@ -442,7 +442,8 @@ class ContainerRecycler(Driver):
         output = output.strip().split('\n')
 
         # the first line contains the offsets
-        (header, *remainder) = output
+        header = output[0]
+        remainder = output[1:]
 
         # calculate the column widths from the header by calculating the
         # offsets of the columns
