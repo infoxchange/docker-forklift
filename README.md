@@ -89,6 +89,17 @@ When running in SSH daemon mode, Forklift starts the container in the
 background and prints a command to SSH to it. It is up to the user to stop
 the container when no longer needed.
 
+#### SSH Troubleshooting
+
+Sometimes you will see the following message:
+
+    Timed out waiting for SSH setup. You can still try the command below but
+    it might also indicate a problem with SSH setup.
+
+The message is fairly self explanatory, but how to investigate further if the command doesn't work?
+
+First run `docker ps`, which gives a list of running containers. Note the container id of the container that forklift started, then run `docker logs <container_id>`. This will give you more information about what has happened inside the container.
+
 ### Recycler
 
 Forklift can clean up old containers and images on your system. By default
