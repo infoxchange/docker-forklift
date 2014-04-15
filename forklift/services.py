@@ -51,7 +51,7 @@ def split_host_port(host_port, default_port):
         host, port = host_port
         return host, port
     else:
-        return host_port, default_port
+        return host_port[0], default_port
 
 
 register = Registry()  # pylint:disable=invalid-name

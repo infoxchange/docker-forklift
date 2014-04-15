@@ -64,6 +64,33 @@ class ElasticsearchTestCase(unittest.TestCase):
         self.assertEqual(service.host, 'localhost')
 
 
+class MemcacheTestCase(unittest.TestCase):
+    """
+    Test Memcache service.
+    """
+
+    def test_host(self):
+        """
+        Test host get/set.
+        """
+
+        service = forklift.services.MemcacheService(
+            'index',
+            ['alpha', 'beta:11222'])
+
+        self.assertEqual(service.hosts, [
+            'alpha',
+            'beta:11222',
+        ])
+        self.assertEqual(service.host, 'alpha|beta')
+
+        service.host = 'elsewhere'
+
+        self.assertEqual(service.hosts, [
+            'elsewhere:11211',
+        ])
+
+
 class ServicesAPITestCase(unittest.TestCase):
     """
     Test all services match the API
