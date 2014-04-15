@@ -40,6 +40,20 @@ def port_open(host, port):
             return False
 
 
+def split_host_port(host_port, default_port):
+    """
+    Split host:port into host and port, using the default port in case
+    it's not given.
+    """
+
+    host_port = host_port.split(':')
+    if len(host_port) == 2:
+        host, port = host_port
+        return host, port
+    else:
+        return host_port, default_port
+
+
 register = Registry()  # pylint:disable=invalid-name
 
 
@@ -194,6 +208,8 @@ class MemcacheService(Service):
     allow_override = ('key_prefix', 'hosts')
     providers = ('localhost',)
 
+    DEFAULT_PORT = 11211
+
     def __init__(self,
                  key_prefix='',
                  hosts=None):
@@ -222,12 +238,7 @@ class MemcacheService(Service):
             return False
 
         for host in self.hosts:
-            try:
-                host, port = host.split(':', 1)
-            except ValueError:
-                port = 11211
-
-            if port_open(host, port):
+            if port_open(*split_host_port(host, self.DEFAULT_PORT)):
                 return True
 
         return False
@@ -238,7 +249,10 @@ class MemcacheService(Service):
         The (pipe separated) hosts for the Memcache service.
         """
 
-        return '|'.join(self.hosts)
+        return '|'.join(
+            split_host_port(host, self.DEFAULT_PORT)[0]
+            for host in self.hosts
+        )
 
     @host.setter
     def host(self, host):
@@ -255,7 +269,7 @@ class MemcacheService(Service):
         """
 
         return cls(key_prefix=application_id,
-                   hosts=['localhost:11211'])
+                   hosts=['localhost:{0}'.format(cls.DEFAULT_PORT)])
 
 
 @register('elasticsearch')
