@@ -205,7 +205,7 @@ class MemcacheService(Service):
     Memcache service for the application.
     """
 
-    allow_override = ('key_prefix', 'hosts')
+    allow_override = ('key_prefix', 'host', 'hosts')
     providers = ('localhost',)
 
     DEFAULT_PORT = 11211
@@ -260,7 +260,10 @@ class MemcacheService(Service):
         Set the host to access Memcache at.
         """
 
-        self.hosts = host.split('|')
+        self.hosts = [
+            h if ':' in h else '{0}:{1}'.format(h, self.DEFAULT_PORT)
+            for h in host.split('|')
+        ]
 
     @classmethod
     def localhost(cls, application_id):
