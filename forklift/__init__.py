@@ -214,7 +214,7 @@ class Forklift(object):
             driver = driver_class(
                 target=target,
                 services=services,
-                environment=self.conf.get('environment', {}),
+                environment=self.conf.get('environment', []),
                 conf=self.conf,
             )
 

@@ -111,8 +111,8 @@ The following environment is always available to the running application:
 * `SITE_DOMAIN` and `SITE_PROTOCOL`: The URL where the application will be
 accessible to the outside world if it listens on port 8000 locally.
 * Any environment variables from configured services.
-* All variables under `environment` (e.g. `environment.FOO` will be passed in
-as `FOO`).
+* All extra environment passed as `environment` (e.g. `--environment FOO=bar`
+will set environment variable `FOO` to `bar`).
 
 Most of the services which provide per-application resources (e.g. a database)
 need to distinguish between different applications running on the same host.
@@ -223,7 +223,7 @@ example, `foo.yaml`:
 
     environment:
       # Only foo project needs this other database connection
-      DB_ANOTHER_URL: postgres://alice:rabbit@test.server/foo_test_db
+      - DB_ANOTHER_URL=postgres://alice:rabbit@test.server/foo_test_db
 
 Finally, the command line options can be used to quickly alter settings while
 developing.

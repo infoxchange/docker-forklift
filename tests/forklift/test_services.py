@@ -200,9 +200,9 @@ class CaptureEnvironmentMixin(object):
         """
 
         with self.configuration_file({
-            'environment': {
-                'BAR': 'additional',
-            },
+            'environment': [
+                'BAR=additional',
+            ],
         }):
             self.assertEqual(self.capture_env()['BAR'], 'additional')
 

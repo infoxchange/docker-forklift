@@ -100,7 +100,9 @@ class Driver(object):
         for service in self.services:
             env.update(service.environment())
 
-        env.update(self.added_environment)
+        for pair in self.added_environment:
+            variable, value = pair.split('=', 1)
+            env[variable] = value
 
         return env
 
