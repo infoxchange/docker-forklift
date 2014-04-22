@@ -18,6 +18,7 @@ A script to install and start an SSH daemon in a Docker image, enabling the
 user to log on to it.
 """
 
+import argparse
 import os
 import pwd
 import socket
@@ -32,24 +33,40 @@ from distutils.spawn import find_executable
 from xdg.BaseDirectory import xdg_config_home
 
 
+from forklift.arguments import argument_factory, convert_to_args, project_args
 from forklift.base import DEVNULL, ImproperlyConfigured
 import forklift.drivers
 import forklift.services
 
 
-def dict_deep_merge(left, right):
+def create_parser(services, drivers):
     """
-    Merge two dictionaries recursively, giving the right one preference.
+    Collect all options from services and drivers in an argparse format.
     """
 
-    if not isinstance(right, dict):
-        return right
+    parser = argparse.ArgumentParser(
+        usage="%(prog)s [options]",
+    )
+    add_argument = parser.add_argument
 
-    result = left.copy()
-    for key, value in right.items():
-        result[key] = dict_deep_merge(result.get(key, {}), value)
+    add_argument('--application_id')
+    add_argument('--driver', default=None, choices=drivers.keys())
+    add_argument('--services', default=[], nargs='*', choices=services.keys())
+    add_argument('--environment', default=[], nargs='*',
+                 type=lambda pair: pair.split('=', 1))
 
-    return result
+    for name, service in services.items():
+        service.add_arguments(argument_factory(add_argument, name))
+
+    # Add options common to all drivers
+    forklift.drivers.Driver.add_common_arguments(add_argument)
+    for name, driver in drivers.items():
+        # Add options specific to each driver
+        driver.add_arguments(argument_factory(add_argument, name))
+
+    add_argument('command', nargs='+')
+
+    return parser
 
 
 class Forklift(object):
@@ -74,14 +91,16 @@ class Forklift(object):
         # - user per-project configuration file
         # - command line
 
-        self.conf = self.implicit_configuration()
+        options = self.implicit_configuration()
 
         for conffile in self.configuration_files():
-            self.conf = dict_deep_merge(self.conf,
-                                        self.file_configuration(conffile))
+            options.extend(self.file_configuration(conffile))
 
-        (self.args, kwargs) = self.command_line_configuration(argv)
-        self.conf = dict_deep_merge(self.conf, kwargs)
+        options.extend(argv[1:])
+
+        parser = create_parser(self.services, self.drivers)
+
+        self.conf = parser.parse_args(options)
 
     def implicit_configuration(self):
         """
@@ -89,16 +108,16 @@ class Forklift(object):
         """
 
         application_id = os.path.basename(os.path.abspath(os.curdir))
-        return {
-            'application_id': application_id,
-        }
+        return [
+            '--application_id', application_id,
+        ]
 
     def configuration_files(self):
         """
         A list of configuration files to look for settings in.
         """
 
-        application_id = self.conf['application_id']
+        application_id = self.conf.application_id
         return (
             'forklift.yaml',
             os.path.join(self.CONFIG_DIR, '_default.yaml'),
@@ -111,40 +130,9 @@ class Forklift(object):
         """
         try:
             with open(name) as conffile:
-                return yaml.load(conffile)
+                return convert_to_args(yaml.load(conffile))
         except IOError:
-            return {}
-
-    def command_line_configuration(self, argv):
-        """
-        Parse settings from the command line.
-        """
-
-        args = []
-        kwargs = {}
-
-        command_line = argv[1:]
-        parsing_kwargs = True
-        while command_line:
-            arg = command_line.pop(0)
-            if parsing_kwargs:
-                if arg == '--':
-                    parsing_kwargs = False
-                elif arg.startswith('--'):
-                    setting = arg[2:]
-                    if not command_line or command_line[0].startswith('--'):
-                        conf = True
-                    else:
-                        conf = command_line.pop(0)
-                    for part in reversed(setting.split('.')):
-                        conf = {part: conf}
-                    kwargs = dict_deep_merge(kwargs, conf)
-                else:
-                    args.append(arg)
-            else:
-                args.append(arg)
-
-        return (args, kwargs)
+            return []
 
     @staticmethod
     def _readme_stream():
@@ -186,36 +174,39 @@ class Forklift(object):
         Run the specified application command.
         """
 
-        if 'help' in self.conf or len(self.args) == 0:
+        if self.conf.command == ['help']:
             self.help()
             return 0
 
-        (target, *command) = self.args
+        (target, *command) = self.conf.command
 
-        if 'driver' in self.conf:
-            driver_class = self.drivers[self.conf['driver']]
+        if self.conf.driver:
+            driver_name = self.conf.driver
         else:
-            for driver_class in self.drivers.values():
+            for driver_name, driver_class in self.drivers.items():
                 if driver_class.valid_target(target):
                     break
             else:
-                driver_class = self.drivers['docker']
+                driver_name = 'docker'
+        driver_class = self.drivers[driver_name]
 
         try:
-            required_services = self.conf.get('services', [])
             services = [
                 self.services[service].provide(
-                    self.conf['application_id'],
-                    self.conf.get(service)
+                    self.conf.application_id,
+                    project_args(self.conf, service)
                 )
-                for service in required_services
+                for service in self.conf.services
             ]
+
+            environment = dict(self.conf.environment)
 
             driver = driver_class(
                 target=target,
                 services=services,
-                environment=self.conf.get('environment', []),
-                conf=self.conf,
+                environment=environment,
+                common_conf=self.conf,
+                conf=project_args(self.conf, driver_name),
             )
 
         except ImproperlyConfigured as ex:

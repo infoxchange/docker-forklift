@@ -70,6 +70,18 @@ class Service(object):
     allow_override = ()
 
     @classmethod
+    def add_arguments(cls, add_argument):
+        """
+        Add service configuration arguments to the parser.
+        """
+
+        # TODO: refactor for types other than string (port numbers) and
+        # list (Elasticsearch host).
+
+        for param in cls.allow_override:
+            add_argument('--{0}'.format(param))
+
+    @classmethod
     def provide(cls, application_id, overrides=None):
         """
         Choose the first available service from the list of providers.
@@ -80,13 +92,14 @@ class Service(object):
         for provider in cls.providers:
             service = getattr(cls, provider)(application_id)
 
-            for key, value in overrides.items():
-                if key in cls.allow_override:
-                    setattr(service, key, value)
-                else:
-                    raise ImproperlyConfigured(
-                        "Invalid parameter {0} for service {1}.".format(
-                            key, cls.__name__))
+            for key, value in vars(overrides).items():
+                if value is not None:
+                    if key in cls.allow_override:
+                        setattr(service, key, value)
+                    else:
+                        raise ImproperlyConfigured(
+                            "Invalid parameter {0} for service {1}.".format(
+                                key, cls.__name__))
 
             if service.available():
                 return service

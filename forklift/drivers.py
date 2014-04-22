@@ -40,7 +40,8 @@ class Driver(object):
     A method of executing the application with supplied services.
     """
 
-    def __init__(self, target, services, environment, conf):
+    # pylint:disable=too-many-arguments
+    def __init__(self, target, services, environment, common_conf, conf):
         """
         Initialise the driver with the specified target and services.
         """
@@ -48,6 +49,7 @@ class Driver(object):
         self.target = target
         self.services = services
         self.added_environment = environment
+        self.common_conf = common_conf
         self.conf = conf
 
     # pylint:disable=unused-argument
@@ -100,9 +102,7 @@ class Driver(object):
         for service in self.services:
             env.update(service.environment())
 
-        for pair in self.added_environment:
-            variable, value = pair.split('=', 1)
-            env[variable] = value
+        env.update(self.added_environment)
 
         return env
 
@@ -111,8 +111,8 @@ class Driver(object):
         Find a free port to serve on.
         """
 
-        if 'serve_port' in self.conf:
-            return self.conf['serve_port']
+        if self.common_conf.serve_port:
+            return self.common_conf.serve_port
 
         # pylint:disable=access-member-before-definition
         # pylint:disable=attribute-defined-outside-init
@@ -121,6 +121,22 @@ class Driver(object):
 
         self._serve_port = free_port()
         return self._serve_port
+
+    @classmethod
+    def add_common_arguments(cls, add_argument):
+        """
+        Add common driver configuration arguments to the parser.
+        """
+
+        add_argument('--serve-port', type=int, default=None)
+
+    @classmethod
+    def add_arguments(cls, add_argument):
+        """
+        Add driver-specific configuration arguments to the parser.
+        """
+
+        pass
 
     def print_url(self):
         """
@@ -148,6 +164,21 @@ class Docker(Driver):
     """
     Execute the application packaged as a Docker container.
     """
+
+    @classmethod
+    def add_arguments(cls, add_argument):
+        """
+        Add Docker-specific options.
+        """
+
+        add_argument('--rm', default=False, action='store_true')
+        add_argument('--privileged', default=False, action='store_true')
+        add_argument('--interactive', default=False, action='store_true')
+        add_argument('--mount-root')
+        add_argument('--storage')
+        add_argument('--user', default='app')
+        add_argument('--host_uid', default=os.getuid())
+        add_argument('--identity')
 
     def run(self, *command):
         """
@@ -196,8 +227,10 @@ class Docker(Driver):
             'docker', 'run',
             '-p', '{0}:8000'.format(self.serve_port()),
         ]
-        if self.conf.get('rm'):
+
+        if self.conf.rm:
             docker_command += ['--rm']
+
         if use_sshd:
             docker_command += [
                 '-d',
@@ -208,18 +241,22 @@ class Docker(Driver):
         else:
             for key, value in self.environment().items():
                 docker_command += ['-e', '{0}={1}'.format(key, value)]
-        if self.conf.get('privileged'):
+
+        if self.conf.privileged:
             docker_command += [
                 '--privileged',
             ]
-        if self.conf.get('interactive'):
+
+        if self.conf.interactive:
             docker_command += [
                 '-i', '-t',
             ]
-        if self.conf.get('storage'):
-            subprocess.check_call(['mkdir', '-p', self.conf['storage']])
+
+        if self.conf.storage:
+            storage = self.conf.storage
+            subprocess.check_call(['mkdir', '-p', storage])
             docker_command += [
-                '-v', '{storage}:/storage'.format(self.conf),
+                '-v', '{0}:/storage'.format(storage),
             ]
         docker_command += [self.target]
         docker_command += command
@@ -244,8 +281,8 @@ class Docker(Driver):
         """
 
         # If requested, mount the working directory
-        if self.conf.get('mount-root'):
-            mount_root = self.conf['mount-root']
+        if self.conf.mount_root:
+            mount_root = self.conf.mount_root
 
             subprocess.call(['sudo', 'umount', mount_root],
                             stderr=DEVNULL)
@@ -275,7 +312,7 @@ class Docker(Driver):
 
         # determine the user's SSH key(s)
         identity = None
-        if 'identity' not in self.conf:
+        if not self.conf.identity:
             # provide the entire set of keys
             # pylint:disable=no-member
             ssh_key = (subprocess
@@ -287,14 +324,15 @@ class Docker(Driver):
                     "You don't seem to have any SSH keys! "
                     "How do you do any work?")
         else:
-            identity = self.conf['identity']
+            identity = self.conf.identity
             if not os.path.exists(identity):
                 identity = os.path.expanduser(
-                    '~/.ssh/{}'.format(self.conf['identity']))
+                    '~/.ssh/{}'.format(self.conf.identity))
             with open(identity + '.pub') as id_file:
                 ssh_key = id_file.read().strip()
 
         commands = [
+            'apt-get -qq update',
             'DEBIAN_FRONTEND=noninteractive apt-get -qq install ssh sudo',
             'invoke-rc.d ssh stop',
             ('echo \'AuthorizedKeysFile /etc/ssh/%u/authorized_keys\' >> ' +
@@ -320,8 +358,8 @@ class Docker(Driver):
         ]
 
         args = {
-            'user': self.conf.get('user', 'app'),
-            'host_uid': self.conf.get('host-uid', os.getuid()),
+            'user': self.conf.user,
+            'host_uid': self.conf.host_uid,
             'ssh_key': ssh_key,
         }
 
@@ -357,7 +395,7 @@ class Docker(Driver):
         ssh_port = port_config['22/tcp'][0]['HostPort']
         ssh_command = [
             'ssh',
-            '{0}@localhost'.format(self.conf.get('user', 'app')),
+            '{0}@localhost'.format(self.conf.user),
             '-p',
             ssh_port,
             '-A',
@@ -366,7 +404,7 @@ class Docker(Driver):
         if identity:
             ssh_command += ('-i', identity)
 
-        for _ in range(1, 20):
+        for _ in range(1, 120):
             try:
                 subprocess.check_call(
                     ssh_command + ['-o', 'StrictHostKeyChecking=no',
@@ -393,16 +431,22 @@ class ContainerRecycler(Driver):
     Cleans up Docker's mess
     """
 
+    @classmethod
+    def add_arguments(cls, add_argument):
+        """
+        Add recycler-specific options.
+        """
+
+        add_argument('--include-running', default=False, action='store_true')
+        add_argument('--include-tagged', default=False, action='store_true')
+
     def run(self, *command):
         """
         Recycle old containers and images
         """
 
-        include_running = 'include-running' in self.conf
-        include_tagged = 'include-tagged' in self.conf
-
-        self.recycle_containers(include_running=include_running)
-        self.recycle_images(include_tagged=include_tagged)
+        self.recycle_containers(include_running=self.conf.include_running)
+        self.recycle_images(include_tagged=self.conf.include_tagged)
 
     def recycle_containers(self, include_running=False):
         """
