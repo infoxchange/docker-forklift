@@ -28,6 +28,7 @@ from tests.base import (
     TestForklift,
 )
 
+from forklift.base import DEVNULL
 from forklift.drivers import Docker
 
 
@@ -36,24 +37,24 @@ class SaveSSHDetailsDocker(Docker):
     Save SSH command the container ran.
     """
 
-    ssh_commands = []
+    log = []
 
-    def ssh_command(self, *args, **kwargs):
+    def ssh_command(self, container, identity=None):
         """
         Save the SSH command for later inspection.
         """
 
-        command, available = super().ssh_command(*args, **kwargs)
-        self.ssh_commands.append((command, available))
+        command, available = super().ssh_command(container, identity=identity)
+        self.log.append((command, available, container))
         return command, available
 
     @classmethod
-    def next_ssh_command(cls):
+    def last_details(cls):
         """
         Return the next (FIFO) SSH command.
         """
 
-        return cls.ssh_commands.pop(0)
+        return cls.log.pop(0)
 
 
 class SSHTestForklift(TestForklift):
@@ -81,18 +82,28 @@ class SSHTestCase(TestCase):
         Test setting up an SSH daemon.
         """
 
-        os.chmod(self.private_key, 0o600)
+        container = None
+        try:
+            os.chmod(self.private_key, 0o600)
 
-        self.assertEqual(0, self.run_forklift(
-            '--driver', 'save_ssh_command_docker',
-            DOCKER_BASE_IMAGE, 'sshd',
-            '--save_ssh_command_docker-identity', self.private_key,
-        ))
+            self.assertEqual(0, self.run_forklift(
+                '--driver', 'save_ssh_command_docker',
+                DOCKER_BASE_IMAGE, 'sshd',
+                '--save_ssh_command_docker-identity', self.private_key,
+            ))
 
-        command, available = SaveSSHDetailsDocker.next_ssh_command()
+            command, available, container = SaveSSHDetailsDocker.last_details()
 
-        self.assertTrue(available)
-        self.assertEqual(0, subprocess.call(
-            command + ' /bin/true',
-            shell=True
-        ))
+            self.assertTrue(available)
+            self.assertEqual(0, subprocess.call(
+                command + ' /bin/true',
+                shell=True
+            ))
+        finally:
+            # Kill and remove the started container
+            if container is not None:
+                for action in ('stop', 'rm'):
+                    subprocess.check_call(
+                        ('docker', action, container),
+                        stdout=DEVNULL,
+                    )
