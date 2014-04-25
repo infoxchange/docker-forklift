@@ -40,8 +40,7 @@ class Driver(object):
     A method of executing the application with supplied services.
     """
 
-    # pylint:disable=too-many-arguments
-    def __init__(self, target, services, environment, common_conf, conf):
+    def __init__(self, target, services, environment, conf):
         """
         Initialise the driver with the specified target and services.
         """
@@ -49,7 +48,6 @@ class Driver(object):
         self.target = target
         self.services = services
         self.added_environment = environment
-        self.common_conf = common_conf
         self.conf = conf
 
     # pylint:disable=unused-argument
@@ -111,8 +109,8 @@ class Driver(object):
         Find a free port to serve on.
         """
 
-        if self.common_conf.serve_port:
-            return self.common_conf.serve_port
+        if self.conf.serve_port:
+            return self.conf.serve_port
 
         # pylint:disable=access-member-before-definition
         # pylint:disable=attribute-defined-outside-init
@@ -123,20 +121,12 @@ class Driver(object):
         return self._serve_port
 
     @classmethod
-    def add_common_arguments(cls, add_argument):
+    def add_arguments(cls, add_argument):
         """
-        Add common driver configuration arguments to the parser.
+        Add driver configuration arguments to the parser.
         """
 
         add_argument('--serve-port', type=int, default=None)
-
-    @classmethod
-    def add_arguments(cls, add_argument):
-        """
-        Add driver-specific configuration arguments to the parser.
-        """
-
-        pass
 
     def print_url(self):
         """
@@ -170,6 +160,8 @@ class Docker(Driver):
         """
         Add Docker-specific options.
         """
+
+        super().add_arguments(add_argument)
 
         add_argument('--rm', default=False, action='store_true')
         add_argument('--privileged', default=False, action='store_true')
@@ -436,6 +428,8 @@ class ContainerRecycler(Driver):
         """
         Add recycler-specific options.
         """
+
+        super().add_arguments(add_argument)
 
         add_argument('--include-running', default=False, action='store_true')
         add_argument('--include-tagged', default=False, action='store_true')

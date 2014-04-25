@@ -89,7 +89,7 @@ class DockerCommandsTestCase(CommandsMixin, TestCase):
 
         return self.run_forklift(
             '--driver', 'save_output_docker',
-            '--save_output_docker-rm',
+            '--rm',
             DOCKER_BASE_IMAGE,
             *command
         )
@@ -242,6 +242,6 @@ class DockerEnvironmentTestCase(CaptureEnvironmentMixin, TestCase):
         prepend_args = prepend_args or []
         prepend_args.append(DOCKER_BASE_IMAGE)
 
-        args = ['--save_output_docker-rm'] + list(args)
+        args = ['--rm'] + list(args)
 
         return super().capture_env(*args, prepend_args=prepend_args)

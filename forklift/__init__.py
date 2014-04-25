@@ -58,13 +58,14 @@ def create_parser(services, drivers):
     for name, service in services.items():
         service.add_arguments(argument_factory(add_argument, name))
 
-    # Add options common to all drivers
-    forklift.drivers.Driver.add_common_arguments(add_argument)
-    for name, driver in drivers.items():
-        # Add options specific to each driver
-        driver.add_arguments(argument_factory(add_argument, name))
-
     add_argument('command', nargs='+')
+
+    # Drivers inherit all the common options from their base class, so
+    # allow conflicts for this group of options
+    driver_options = parser.add_argument_group('Driver options')
+    driver_options.conflict_handler = 'resolve'
+    for name, driver in drivers.items():
+        driver.add_arguments(driver_options.add_argument)
 
     return parser
 
@@ -205,8 +206,7 @@ class Forklift(object):
                 target=target,
                 services=services,
                 environment=environment,
-                common_conf=self.conf,
-                conf=project_args(self.conf, driver_name),
+                conf=self.conf,
             )
 
         except ImproperlyConfigured as ex:

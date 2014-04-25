@@ -89,7 +89,7 @@ class SSHTestCase(TestCase):
             self.assertEqual(0, self.run_forklift(
                 '--driver', 'save_ssh_command_docker',
                 DOCKER_BASE_IMAGE, 'sshd',
-                '--save_ssh_command_docker-identity', self.private_key,
+                '--identity', self.private_key,
             ))
 
             command, available, container = SaveSSHDetailsDocker.last_details()
