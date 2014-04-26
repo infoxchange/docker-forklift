@@ -49,16 +49,21 @@ def create_parser(services, drivers):
     )
     add_argument = parser.add_argument
 
-    add_argument('--application_id')
-    add_argument('--driver', default=None, choices=drivers.keys())
-    add_argument('--services', default=[], nargs='*', choices=services.keys())
+    add_argument('--application_id',
+                 help="Application name to derive resource names from")
+    add_argument('--driver', default=None, choices=drivers.keys(),
+                 help="Driver to execute the application with")
+    add_argument('--services', default=[], nargs='*', choices=services.keys(),
+                 help="Services to provide to the application")
     add_argument('--environment', default=[], nargs='*',
-                 type=lambda pair: pair.split('=', 1))
+                 type=lambda pair: pair.split('=', 1),
+                 help="Additional environment variables to pass")
 
     for name, service in services.items():
         service.add_arguments(argument_factory(add_argument, name))
 
-    add_argument('command', nargs='+')
+    add_argument('command', nargs='+',
+                 help="Command to run")
 
     # Drivers inherit all the common options from their base class, so
     # allow conflicts for this group of options

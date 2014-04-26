@@ -126,7 +126,8 @@ class Driver(object):
         Add driver configuration arguments to the parser.
         """
 
-        add_argument('--serve-port', type=int, default=None)
+        add_argument('--serve-port', type=int, default=None,
+                     help="The port to expose the application on")
 
     def print_url(self):
         """
@@ -163,14 +164,24 @@ class Docker(Driver):
 
         super().add_arguments(add_argument)
 
-        add_argument('--rm', default=False, action='store_true')
-        add_argument('--privileged', default=False, action='store_true')
-        add_argument('--interactive', default=False, action='store_true')
-        add_argument('--mount-root')
-        add_argument('--storage')
-        add_argument('--user', default='app')
-        add_argument('--host_uid', default=os.getuid())
-        add_argument('--identity')
+        add_argument('--rm', default=False, action='store_true',
+                     help="Remove the container after the command exit")
+        add_argument('--privileged', default=False, action='store_true',
+                     help="Run the container in privileged mode")
+        add_argument('--interactive', default=False, action='store_true',
+                     help="Run the command in interactive mode")
+        add_argument('--mount-root',
+                     help="The directory to bind the root directory of the " +
+                     "container to")
+        add_argument('--storage',
+                     help="The directory to mount under /storage in the " +
+                     "container")
+        add_argument('--user', default='app',
+                     help="The user to set up for SSH in the container")
+        add_argument('--host_uid', default=os.getuid(),
+                     help="The UID for the user inside the container")
+        add_argument('--identity',
+                     help="The public key to authorise logging in as")
 
     def run(self, *command):
         """
@@ -431,8 +442,10 @@ class ContainerRecycler(Driver):
 
         super().add_arguments(add_argument)
 
-        add_argument('--include-running', default=False, action='store_true')
-        add_argument('--include-tagged', default=False, action='store_true')
+        add_argument('--include-running', default=False, action='store_true',
+                     help="Remove running containers as well")
+        add_argument('--include-tagged', default=False, action='store_true',
+                     help="Remove tagged images as well")
 
     def run(self, *command):
         """
