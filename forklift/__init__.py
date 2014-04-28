@@ -106,6 +106,15 @@ class Forklift(object):
 
         parser = create_parser(self.services, self.drivers)
 
+        conf = parser.parse_args(options)
+
+        # Once the driver to run the command is known, recreate the parser
+        # with only that driver's options
+
+        driver = self.get_driver(conf)
+
+        parser = create_parser(self.services, {driver: self.drivers[driver]})
+
         self.conf = parser.parse_args(options)
 
     def implicit_configuration(self):
@@ -175,6 +184,24 @@ class Forklift(object):
         readme.close()
         process.wait()
 
+    def get_driver(self, conf):
+        """
+        Find out what driver to use given the configuration.
+
+        If no driver is explicitly specified, choose one which states
+        the command is its valid target or fall back to Docker driver.
+        """
+
+        if conf.driver:
+            return conf.driver
+
+        target = conf.command[0]
+        for driver_name, driver_class in self.drivers.items():
+            if driver_class.valid_target(target):
+                return driver_name
+
+        return 'docker'
+
     def main(self):
         """
         Run the specified application command.
@@ -184,17 +211,10 @@ class Forklift(object):
             self.help()
             return 0
 
-        (target, *command) = self.conf.command
-
-        if self.conf.driver:
-            driver_name = self.conf.driver
-        else:
-            for driver_name, driver_class in self.drivers.items():
-                if driver_class.valid_target(target):
-                    break
-            else:
-                driver_name = 'docker'
+        driver_name = self.get_driver(self.conf)
         driver_class = self.drivers[driver_name]
+
+        (target, *command) = self.conf.command
 
         try:
             services = [
