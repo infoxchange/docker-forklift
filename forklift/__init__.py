@@ -108,12 +108,18 @@ class Forklift(object):
 
         conf = parser.parse_args(options)
 
-        # Once the driver to run the command is known, recreate the parser
-        # with only that driver's options
+        # Once the driver and services are known, parse the arguments again
+        # with only the needed options
 
         driver = self.get_driver(conf)
+        enabled_services = {
+            name: service
+            for name, service in self.services.items()
+            if name in conf.services
+        }
 
-        parser = create_parser(self.services, {driver: self.drivers[driver]})
+        parser = create_parser(enabled_services,
+                               {driver: self.drivers[driver]})
 
         self.conf = parser.parse_args(options)
 
