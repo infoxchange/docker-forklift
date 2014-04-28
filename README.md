@@ -51,7 +51,7 @@ and pass the database URL to the application.
 Docker
 ------
 
-Forklift can run commands directly on Docker containers. By default, if the
+Forklift can run commands directly or Docker containers. By default, if the
 application given is an existing file (e.g. `./manage.py`), it is run directly.
 Otherwise it is assumed to be a Docker image to create a container from.
 The environment is passed to the application in either case.
