@@ -60,7 +60,9 @@ def create_parser(services, drivers):
                  help="Additional environment variables to pass")
 
     for name, service in services.items():
-        service.add_arguments(argument_factory(add_argument, name))
+        service_options = parser.add_argument_group(name)
+        service.add_arguments(
+            argument_factory(service_options.add_argument, name))
 
     add_argument('command', nargs='+',
                  help="Command to run")
