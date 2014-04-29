@@ -17,7 +17,7 @@ def argument_factory(add_argument, name):
 
         assert all(option[:2] == '--' for option in args)
         option_names = [
-            '--{0}-{1}'.format(name, option[2:])
+            '--{0}.{1}'.format(name, option[2:])
             for option in args
         ]
         return add_argument(*option_names, **kwargs)
@@ -41,7 +41,7 @@ def convert_to_args(conf, prefix=None):
             if not isinstance(value, (list, tuple)):
                 value = (value,)
             if len(value) > 0:
-                args.append('--' + '-'.join(arg_prefix))
+                args.append('--' + '.'.join(arg_prefix))
                 for val in value:
                     args.append(str(val))
 
@@ -60,5 +60,5 @@ def project_args(args, prefix):
     return Namespace(**dict(
         (key[strip_len:], value)
         for key, value in pairs
-        if key.startswith(prefix + '_')
+        if key.startswith(prefix + '.')
     ))

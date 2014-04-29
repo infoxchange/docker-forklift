@@ -37,8 +37,8 @@ class ConvertToArgsTestCase(unittest.TestCase):
             '--simple', 'value',
             '--number', '10',
             '--array', 'one', 'two',
-            '--nested-first', 'deep',
-            '--nested-second', 'deeper',
+            '--nested.first', 'deep',
+            '--nested.second', 'deeper',
         ])
 
 
@@ -52,7 +52,11 @@ class ProjectArgsTestCase(unittest.TestCase):
         Test project_args.
         """
 
-        args = Namespace(one_a='1a', one_b='1b', two_c='2c')
+        args = Namespace(**{
+            'one.a': '1a',
+            'one.b': '1b',
+            'two.c': '2c',
+        })
 
         self.assertEqual(
             vars(project_args(args, 'one')),

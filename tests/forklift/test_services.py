@@ -192,7 +192,7 @@ class CaptureEnvironmentMixin(object):
                     '{0}-111-222'.format(self.localhost_reference()))
 
                 self.assertEqual(
-                    self.capture_env('--test-host', 'otherhost')['FOO'],
+                    self.capture_env('--test.host', 'otherhost')['FOO'],
                     'otherhost-111-222'
                 )
 
