@@ -38,27 +38,32 @@ class ElasticsearchTestCase(unittest.TestCase):
             'index',
             'http://alpha:9200|http://beta:9200')
 
-        self.assertEqual(service.url_array, [
+        self.assertEqual(service.urls, [
             urlparse('http://alpha:9200'),
             urlparse('http://beta:9200'),
         ])
+        self.assertEqual(
+            service.environment()['ELASTICSEARCH_URLS'],
+            'http://alpha:9200|http://beta:9200'
+        )
         self.assertEqual(service.host, 'alpha|beta')
 
         service.host = 'elsewhere'
 
-        self.assertEqual(service.url_array, [
+        self.assertEqual(service.urls, [
             urlparse('http://elsewhere:9200'),
             urlparse('http://elsewhere:9200'),
         ])
         self.assertEqual(
-            service.urls,
-            'http://elsewhere:9200|http://elsewhere:9200')
+            service.environment()['ELASTICSEARCH_URLS'],
+            'http://elsewhere:9200|http://elsewhere:9200'
+        )
 
         service = forklift.services.ElasticsearchService(
             'index',
             'http://localhost:9200')
 
-        self.assertEqual(service.url_array, [
+        self.assertEqual(service.urls, [
             urlparse('http://localhost:9200'),
         ])
         self.assertEqual(service.host, 'localhost')
