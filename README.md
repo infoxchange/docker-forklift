@@ -223,7 +223,7 @@ example, `foo.yaml`:
 
     environment:
       # Only foo project needs this other database connection
-      - DB_ANOTHER_URL=postgres://alice:rabbit@test.server/foo_test_db
+      DB_ANOTHER_URL: postgres://alice:rabbit@test.server/foo_test_db
 
 Finally, the command line options can be used to quickly alter settings while
 developing.

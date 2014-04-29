@@ -28,10 +28,21 @@ def argument_factory(add_argument, name):
 def convert_to_args(conf, prefix=None):
     """
     Convert hierarchical configuration dictionary to argparse arguments.
+
+    'environment' at root level is a special case: if it is a hash,
+    it is converted into an array of VAR=VALUE pairs.
     """
 
     args = []
     prefix = prefix or ()
+
+    if not prefix and 'environment' in conf:
+        environment = conf['environment']
+        if isinstance(environment, dict):
+            conf['environment'] = [
+                '{0}={1}'.format(k, v)
+                for k, v in environment.items()
+            ]
 
     for key, value in conf.items():
         arg_prefix = prefix + (key,)

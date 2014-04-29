@@ -208,6 +208,14 @@ class CaptureEnvironmentMixin(object):
         }):
             self.assertEqual(self.capture_env()['BAR'], 'additional')
 
+        # Environment can be passed as a hash
+        with self.configuration_file({
+            'environment': {
+                'BAR': 'additional',
+            },
+        }):
+            self.assertEqual(self.capture_env()['BAR'], 'additional')
+
 
 class DirectEnvironmentTestCase(CaptureEnvironmentMixin, TestCase):
     """
