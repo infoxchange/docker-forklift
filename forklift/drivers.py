@@ -104,9 +104,21 @@ class Driver(object):
 
         return env
 
-    def serve_port(self):
+    @staticmethod
+    def _free_port():
         """
         Find a free port to serve on.
+
+        Overridden in tests for reproducibility.
+        """
+
+        return free_port()
+
+    def serve_port(self):
+        """
+        The port for application to serve in.
+
+        If not explicitly given in the configuration, pick a free one.
         """
 
         if self.conf.serve_port:
@@ -117,7 +129,7 @@ class Driver(object):
         if hasattr(self, '_serve_port'):
             return self._serve_port
 
-        self._serve_port = free_port()
+        self._serve_port = self._free_port()
         return self._serve_port
 
     @classmethod
@@ -126,7 +138,7 @@ class Driver(object):
         Add driver configuration arguments to the parser.
         """
 
-        add_argument('--serve-port', type=int, default=None,
+        add_argument('--serve_port', type=int, default=None,
                      help="The port to expose the application on")
 
     def print_url(self):

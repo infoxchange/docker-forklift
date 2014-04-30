@@ -188,6 +188,9 @@ class CaptureEnvironmentMixin(object):
         self.assertEqual(env['SITE_PROTOCOL'], 'http')
         self.assertEqual(env['SITE_DOMAIN'], 'localhost:9999')
 
+        env = self.capture_env('--serve_port', '9998')
+        self.assertEqual(env['SITE_DOMAIN'], 'localhost:9998')
+
     def test_service_environment(self):
         """
         Test passing service environment to the command.
