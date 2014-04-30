@@ -18,6 +18,7 @@ A script to install and start an SSH daemon in a Docker image, enabling the
 user to log on to it.
 """
 
+import argparse
 import os
 import pwd
 import socket
@@ -32,24 +33,48 @@ from distutils.spawn import find_executable
 from xdg.BaseDirectory import xdg_config_home
 
 
+from forklift.arguments import argument_factory, convert_to_args, project_args
 from forklift.base import DEVNULL, ImproperlyConfigured
 import forklift.drivers
 import forklift.services
 
 
-def dict_deep_merge(left, right):
+def create_parser(services, drivers):
     """
-    Merge two dictionaries recursively, giving the right one preference.
+    Collect all options from services and drivers in an argparse format.
     """
 
-    if not isinstance(right, dict):
-        return right
+    parser = argparse.ArgumentParser(
+        usage="%(prog)s [options]",
+    )
+    add_argument = parser.add_argument
 
-    result = left.copy()
-    for key, value in right.items():
-        result[key] = dict_deep_merge(result.get(key, {}), value)
+    add_argument('--application_id',
+                 help="Application name to derive resource names from")
+    add_argument('--driver', default=None, choices=drivers.keys(),
+                 help="Driver to execute the application with")
+    add_argument('--services', default=[], nargs='*', choices=services.keys(),
+                 help="Services to provide to the application")
+    add_argument('--environment', default=[], nargs='*',
+                 type=lambda pair: pair.split('=', 1),
+                 help="Additional environment variables to pass")
 
-    return result
+    for name, service in services.items():
+        service_options = parser.add_argument_group(name)
+        service.add_arguments(
+            argument_factory(service_options.add_argument, name))
+
+    add_argument('command', nargs='+',
+                 help="Command to run")
+
+    # Drivers inherit all the common options from their base class, so
+    # allow conflicts for this group of options
+    driver_options = parser.add_argument_group('Driver options')
+    driver_options.conflict_handler = 'resolve'
+    for name, driver in drivers.items():
+        driver.add_arguments(driver_options.add_argument)
+
+    return parser
 
 
 class Forklift(object):
@@ -74,14 +99,31 @@ class Forklift(object):
         # - user per-project configuration file
         # - command line
 
-        self.conf = self.implicit_configuration()
+        options = self.implicit_configuration()
 
         for conffile in self.configuration_files():
-            self.conf = dict_deep_merge(self.conf,
-                                        self.file_configuration(conffile))
+            options.extend(self.file_configuration(conffile))
 
-        (self.args, kwargs) = self.command_line_configuration(argv)
-        self.conf = dict_deep_merge(self.conf, kwargs)
+        options.extend(argv[1:])
+
+        parser = create_parser(self.services, self.drivers)
+
+        conf = parser.parse_args(options)
+
+        # Once the driver and services are known, parse the arguments again
+        # with only the needed options
+
+        driver = self.get_driver(conf)
+        enabled_services = {
+            name: service
+            for name, service in self.services.items()
+            if name in conf.services
+        }
+
+        parser = create_parser(enabled_services,
+                               {driver: self.drivers[driver]})
+
+        self.conf = parser.parse_args(options)
 
     def implicit_configuration(self):
         """
@@ -89,16 +131,16 @@ class Forklift(object):
         """
 
         application_id = os.path.basename(os.path.abspath(os.curdir))
-        return {
-            'application_id': application_id,
-        }
+        return [
+            '--application_id', application_id,
+        ]
 
     def configuration_files(self):
         """
         A list of configuration files to look for settings in.
         """
 
-        application_id = self.conf['application_id']
+        application_id = self.conf.application_id
         return (
             'forklift.yaml',
             os.path.join(self.CONFIG_DIR, '_default.yaml'),
@@ -111,40 +153,9 @@ class Forklift(object):
         """
         try:
             with open(name) as conffile:
-                return yaml.load(conffile)
+                return convert_to_args(yaml.load(conffile))
         except IOError:
-            return {}
-
-    def command_line_configuration(self, argv):
-        """
-        Parse settings from the command line.
-        """
-
-        args = []
-        kwargs = {}
-
-        command_line = argv[1:]
-        parsing_kwargs = True
-        while command_line:
-            arg = command_line.pop(0)
-            if parsing_kwargs:
-                if arg == '--':
-                    parsing_kwargs = False
-                elif arg.startswith('--'):
-                    setting = arg[2:]
-                    if not command_line or command_line[0].startswith('--'):
-                        conf = True
-                    else:
-                        conf = command_line.pop(0)
-                    for part in reversed(setting.split('.')):
-                        conf = {part: conf}
-                    kwargs = dict_deep_merge(kwargs, conf)
-                else:
-                    args.append(arg)
-            else:
-                args.append(arg)
-
-        return (args, kwargs)
+            return []
 
     @staticmethod
     def _readme_stream():
@@ -181,40 +192,53 @@ class Forklift(object):
         readme.close()
         process.wait()
 
+    def get_driver(self, conf):
+        """
+        Find out what driver to use given the configuration.
+
+        If no driver is explicitly specified, choose one which states
+        the command is its valid target or fall back to Docker driver.
+        """
+
+        if conf.driver:
+            return conf.driver
+
+        target = conf.command[0]
+        for driver_name, driver_class in self.drivers.items():
+            if driver_class.valid_target(target):
+                return driver_name
+
+        return 'docker'
+
     def main(self):
         """
         Run the specified application command.
         """
 
-        if 'help' in self.conf or len(self.args) == 0:
+        if self.conf.command == ['help']:
             self.help()
             return 0
 
-        (target, *command) = self.args
+        driver_name = self.get_driver(self.conf)
+        driver_class = self.drivers[driver_name]
 
-        if 'driver' in self.conf:
-            driver_class = self.drivers[self.conf['driver']]
-        else:
-            for driver_class in self.drivers.values():
-                if driver_class.valid_target(target):
-                    break
-            else:
-                driver_class = self.drivers['docker']
+        (target, *command) = self.conf.command
 
         try:
-            required_services = self.conf.get('services', [])
             services = [
                 self.services[service].provide(
-                    self.conf['application_id'],
-                    self.conf.get(service)
+                    self.conf.application_id,
+                    project_args(self.conf, service)
                 )
-                for service in required_services
+                for service in self.conf.services
             ]
+
+            environment = dict(self.conf.environment)
 
             driver = driver_class(
                 target=target,
                 services=services,
-                environment=self.conf.get('environment', {}),
+                environment=environment,
                 conf=self.conf,
             )
 

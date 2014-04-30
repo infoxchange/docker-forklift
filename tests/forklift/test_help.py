@@ -74,7 +74,7 @@ class HelpTestCase(TestCase):
 
         with tempfile.NamedTemporaryFile() as tmpfile:
             with redirect_stdout_fd(tmpfile.file.fileno()):
-                self.run_forklift('--help')
+                self.run_forklift('help')
 
             with open(tmpfile.name) as saved_output:
                 help_text = saved_output.read()

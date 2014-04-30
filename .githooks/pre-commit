@@ -113,7 +113,7 @@ class Main(object):
             # Get the rating from the result
             #
             rating = pylint_rating(result)
-            if rating < _PYLINT_PASS_THRESHOLD:
+            if rating is not None and rating < _PYLINT_PASS_THRESHOLD:
                 ok = False
                 print(
                     "%s failed PyLint check (scored %s, min allowed is %s)"
@@ -260,6 +260,9 @@ def pylint_rating(result):
     """
     Extract the rating rating from PyLint output.
     """
+
+    if result == '':
+        return None
     rating = re.search(r'Your code has been rated at ([-\d\.]+)/10', result)
     return float(rating.group(1))
 

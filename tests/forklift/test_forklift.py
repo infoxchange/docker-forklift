@@ -89,7 +89,7 @@ class DockerCommandsTestCase(CommandsMixin, TestCase):
 
         return self.run_forklift(
             '--driver', 'save_output_docker',
-            '--rm', 'yes',
+            '--rm',
             DOCKER_BASE_IMAGE,
             *command
         )
@@ -114,11 +114,13 @@ class CaptureEnvironmentMixin(object):
 
         prepend_args = prepend_args or []
 
-        forklift_args = prepend_args + [
-            '--rm', 'yes',  # Only makes sense for Docker, harmless otherwise
+        forklift_args = [
             '--driver', self.driver(),
+        ] + list(args) + [
+            '--',
+        ] + list(prepend_args) + [
             '/usr/bin/env', '-0',
-        ] + list(args)
+        ]
 
         self.assertEqual(0, self.run_forklift(*forklift_args))
 
@@ -200,6 +202,14 @@ class CaptureEnvironmentMixin(object):
         """
 
         with self.configuration_file({
+            'environment': [
+                'BAR=additional',
+            ],
+        }):
+            self.assertEqual(self.capture_env()['BAR'], 'additional')
+
+        # Environment can be passed as a hash
+        with self.configuration_file({
             'environment': {
                 'BAR': 'additional',
             },
@@ -239,5 +249,7 @@ class DockerEnvironmentTestCase(CaptureEnvironmentMixin, TestCase):
 
         prepend_args = prepend_args or []
         prepend_args.append(DOCKER_BASE_IMAGE)
+
+        args = ['--rm'] + list(args)
 
         return super().capture_env(*args, prepend_args=prepend_args)

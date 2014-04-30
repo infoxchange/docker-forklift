@@ -172,9 +172,9 @@ class TestForklift(forklift.Forklift):
         """
         Override application ID.
         """
-        return {
-            'application_id': 'test_app',
-        }
+        return [
+            '--application_id', 'test_app',
+        ]
 
 
 class TestCase(unittest.TestCase):

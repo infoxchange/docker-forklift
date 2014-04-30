@@ -61,8 +61,8 @@ To override the choice, set `driver` parameter to either `docker` or `direct`.
 Docker driver has specific parameters:
 
 * `serve_port` - Services that the container runs on port 8000,
-eg the container running a web server, will be available on this
-port locally
+e.g., the container running a web server, will be available on this
+port locally.
 * `rm`: Automatically remove containers after they've stopped.
 * `privileged`: Run containers in privileged mode.
 * `interactive`: Run containers in interactive mode (`-i -t`).
@@ -111,8 +111,8 @@ The following environment is always available to the running application:
 * `SITE_DOMAIN` and `SITE_PROTOCOL`: The URL where the application will be
 accessible to the outside world if it listens on port 8000 locally.
 * Any environment variables from configured services.
-* All variables under `environment` (e.g. `environment.FOO` will be passed in
-as `FOO`).
+* All extra environment passed as `environment` (e.g. `--environment FOO=bar`
+will set environment variable `FOO` to `bar`).
 
 Most of the services which provide per-application resources (e.g. a database)
 need to distinguish between different applications running on the same host.
@@ -191,7 +191,7 @@ options for PostgreSQL service, etc.
 
 Every parameter value is searched, in order, in the following locations:
 
-* Command line, e.g. `--driver direct` or `--postgres.port 5433` (note the
+* Command line, e.g. `--driver direct` or `--postgres-port 5433` (note the
 nested parameter syntax).
 * User per-project configuration file in `forklift/PROJECT.yaml` inside the
 [XDG configuration directory][xdg] (usually `$HOME/.config`), where

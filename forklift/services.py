@@ -70,6 +70,18 @@ class Service(object):
     allow_override = ()
 
     @classmethod
+    def add_arguments(cls, add_argument):
+        """
+        Add service configuration arguments to the parser.
+        """
+
+        # TODO: refactor for types other than string (port numbers) and
+        # list (Elasticsearch host).
+
+        for param in cls.allow_override:
+            add_argument('--{0}'.format(param))
+
+    @classmethod
     def provide(cls, application_id, overrides=None):
         """
         Choose the first available service from the list of providers.
@@ -80,13 +92,14 @@ class Service(object):
         for provider in cls.providers:
             service = getattr(cls, provider)(application_id)
 
-            for key, value in overrides.items():
-                if key in cls.allow_override:
-                    setattr(service, key, value)
-                else:
-                    raise ImproperlyConfigured(
-                        "Invalid parameter {0} for service {1}.".format(
-                            key, cls.__name__))
+            for key, value in vars(overrides).items():
+                if value is not None:
+                    if key in cls.allow_override:
+                        setattr(service, key, value)
+                    else:
+                        raise ImproperlyConfigured(
+                            "Invalid parameter {0} for service {1}.".format(
+                                key, cls.__name__))
 
             if service.available():
                 return service
@@ -199,6 +212,16 @@ class PostGISService(PostgreSQLService):
     CHECK_COMMAND = 'select PostGIS_full_version()'
 
 
+def pipe_split(string):
+    """
+    Split a pipe-separated string into an array.
+
+    Do nothing if an array already.
+    """
+
+    return string.split('|') if isinstance(string, str) else string
+
+
 @register('memcache')
 class MemcacheService(Service):
     """
@@ -285,7 +308,7 @@ class ElasticsearchService(Service):
 
     def __init__(self, index_name, urls):
         self.index_name = index_name
-        self.url_array = []
+        self._url_array = []
         self.urls = urls
 
     def environment(self):
@@ -295,8 +318,14 @@ class ElasticsearchService(Service):
 
         return {
             'ELASTICSEARCH_INDEX_NAME': self.index_name,
-            'ELASTICSEARCH_URLS': self.urls,
+            'ELASTICSEARCH_URLS': self.url_string(),
         }
+
+    def url_string(self):
+        """
+        All URLs joined as a string.
+        """
+        return '|'.join(url.geturl() for url in self.urls)
 
     @property
     def urls(self):
@@ -304,7 +333,7 @@ class ElasticsearchService(Service):
         The (pipe separated) URLs to access Elasticsearch at.
         """
 
-        return '|'.join(url.geturl() for url in self.url_array)
+        return self._url_array
 
     @urls.setter
     def urls(self, urls):
@@ -312,9 +341,9 @@ class ElasticsearchService(Service):
         Set the URLs to access Elasticsearch at.
         """
 
-        self.url_array = [
-            urllib.parse.urlparse(url)
-            for url in urls.split('|')
+        self._url_array = [
+            urllib.parse.urlparse(url) if isinstance(url, str) else url
+            for url in pipe_split(urls)
         ]
 
     @property
@@ -323,7 +352,7 @@ class ElasticsearchService(Service):
         The (pipe separated) hosts for the Elasticsearch service.
         """
 
-        return '|'.join(url.hostname for url in self.url_array)
+        return '|'.join(url.hostname for url in self._url_array)
 
     @host.setter
     def host(self, host):
@@ -331,11 +360,11 @@ class ElasticsearchService(Service):
         Set the host to access Elasticsearch at.
         """
 
-        self.url_array = [
+        self.urls = [
             # pylint:disable=protected-access
             url._replace(
                 netloc='{host}:{port}'.format(host=host, port=url.port))
-            for url in self.url_array
+            for url in self.urls
         ]
 
     def available(self):
@@ -343,13 +372,12 @@ class ElasticsearchService(Service):
         Check whether Elasticsearch is available at a given URL.
         """
 
-        urls = self.urls.split('|')
-        if not urls:
+        if not self.urls:
             return False
 
-        for url in urls:
+        for url in self.urls:
             try:
-                es_response = urllib.request.urlopen(url)
+                es_response = urllib.request.urlopen(url.geturl())
                 es_status = json.loads(es_response.read().decode())
                 if es_status['status'] != 200:
                     return False
