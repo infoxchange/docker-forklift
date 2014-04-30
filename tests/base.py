@@ -17,8 +17,10 @@
 Base utilities for tests.
 """
 
+import contextlib
 import operator
 import os
+import sys
 import subprocess
 import unittest
 
@@ -162,7 +164,7 @@ class TestForklift(forklift.Forklift):
 
     configuration_file_list = []
 
-    def configuration_files(self):
+    def configuration_files(self, conf):
         """
         Override the configuration files.
         """
@@ -190,3 +192,24 @@ class TestCase(unittest.TestCase):
         """
 
         return self.forklift_class(['forklift'] + list(args)).main()
+
+
+@contextlib.contextmanager
+def redirect_stream(target_fd, stream=None):
+    """
+    Redirect the standard output to the target, including from child processes.
+
+    If 'stream' is specified, redirect that stream instead (e.g. sys.stderr).
+    """
+
+    stream = stream or sys.stdout
+
+    stream_fileno = stream.fileno()
+    saved_stream = os.dup(stream_fileno)
+    os.close(stream_fileno)
+    os.dup2(target_fd, stream_fileno)
+
+    yield
+
+    os.close(stream_fileno)
+    os.dup2(saved_stream, stream_fileno)
