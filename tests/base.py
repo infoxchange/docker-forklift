@@ -100,7 +100,8 @@ class TestDriver(forklift.drivers.Driver):
         env['DEVNAME'] = 'myself'
         return env
 
-    def serve_port(self):
+    @staticmethod
+    def _free_port():
         return 9999
 
     @staticmethod
