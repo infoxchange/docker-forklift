@@ -339,7 +339,7 @@ class Docker(Driver):
             'DEBIAN_FRONTEND=noninteractive apt-get -qq install ssh sudo',
             'invoke-rc.d ssh stop',
             ('echo \'AuthorizedKeysFile /etc/ssh/%u/authorized_keys\' >> ' +
-                '/etc/ssh/sshd_config'),
+             '/etc/ssh/sshd_config'),
             'echo \'PermitUserEnvironment yes\' >> /etc/ssh/sshd_config',
         ] + [
             'echo \'{0}={1}\' >> /etc/environment'.format(*env)

@@ -193,10 +193,11 @@ class PostgreSQLService(Service):
         """
         The PostgreSQL environment on the local machine.
         """
-        return cls(host='localhost',
-                   name=application_id,
-                   user=application_id,
-                   )
+        return cls(
+            host='localhost',
+            name=application_id,
+            user=application_id,
+        )
 
     providers = ('localhost',)
 
