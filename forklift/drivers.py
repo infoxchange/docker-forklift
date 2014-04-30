@@ -26,6 +26,7 @@ import re
 import socket
 import struct
 import subprocess
+import sys
 import time
 
 from forklift.base import DEVNULL, free_port, ImproperlyConfigured
@@ -194,13 +195,14 @@ class Docker(Driver):
                            if 'nameserver' in l and not l.startswith('#')]
             if any('127.0.0.1' in l or '127.0.1.1' in l
                    for l in nameservers):
-                raise ImproperlyConfigured(
+                print(
                     "/etc/resolv.conf on the host specifies localhost "
                     "as the name server. This will make Docker use Google "
-                    "Public DNS inside the container, and using apt-get "
-                    "on Infoxchange images will fail.\n"
+                    "Public DNS inside the container, and accessing Intranet "
+                    "resources will fail.\n"
                     "Please fix /etc/resolv.conf on the host before "
-                    "continuing."
+                    "continuing.",
+                    file=sys.stderr,
                 )
 
         if list(command) == ['sshd']:
