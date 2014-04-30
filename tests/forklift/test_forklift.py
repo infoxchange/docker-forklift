@@ -18,16 +18,41 @@ Tests for Forklift.
 """
 
 import contextlib
+import sys
 import tempfile
 import yaml
 
+import forklift
 from forklift.drivers import ip_address
 from tests.base import (
     docker,
+    redirect_stream,
     DOCKER_BASE_IMAGE,
     SaveOutputMixin,
     TestCase,
 )
+
+
+class SmokeTestCase(TestCase):
+    """
+    Test running forklift with no arguments.
+    """
+
+    # Do not override any drivers or services
+    forklift_class = forklift.Forklift
+
+    def test_usage(self):
+        """
+        Test usage message with no arguments.
+        """
+        with tempfile.NamedTemporaryFile() as tmpfile:
+            with redirect_stream(tmpfile.file.fileno(), stream=sys.stderr):
+                with self.assertRaises(SystemExit):
+                    self.run_forklift()
+
+            with open(tmpfile.name) as saved_stderr:
+                usage_test = saved_stderr.read()
+                self.assertIn("usage: ", usage_test)
 
 
 class CommandsMixin(object):

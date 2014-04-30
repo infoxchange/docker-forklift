@@ -39,7 +39,7 @@ import forklift.drivers
 import forklift.services
 
 
-def create_parser(services, drivers):
+def create_parser(services, drivers, command_required=True):
     """
     Collect all options from services and drivers in an argparse format.
     """
@@ -64,7 +64,7 @@ def create_parser(services, drivers):
         service.add_arguments(
             argument_factory(service_options.add_argument, name))
 
-    add_argument('command', nargs='+',
+    add_argument('command', nargs='+' if command_required else '*',
                  help="Command to run")
 
     # Drivers inherit all the common options from their base class, so
@@ -101,7 +101,11 @@ class Forklift(object):
 
         options = self.implicit_configuration()
 
-        for conffile in self.configuration_files():
+        # Get application_id
+        initial_parser = create_parser({}, {}, command_required=False)
+        conf, _ = initial_parser.parse_known_args(options)
+
+        for conffile in self.configuration_files(conf):
             options.extend(self.file_configuration(conffile))
 
         options.extend(argv[1:])
@@ -135,12 +139,12 @@ class Forklift(object):
             '--application_id', application_id,
         ]
 
-    def configuration_files(self):
+    def configuration_files(self, conf):
         """
         A list of configuration files to look for settings in.
         """
 
-        application_id = self.conf.application_id
+        application_id = conf.application_id
         return (
             'forklift.yaml',
             os.path.join(self.CONFIG_DIR, '_default.yaml'),

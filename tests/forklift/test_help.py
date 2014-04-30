@@ -17,15 +17,13 @@
 Tests for help invocation.
 """
 
-import contextlib
 import io
-import os
-import sys
 import tempfile
 
 from tests.base import (
     TestCase,
     TestForklift,
+    redirect_stream,
 )
 
 
@@ -43,23 +41,6 @@ class HelpTestForklift(TestForklift):
         return io.BytesIO("Help yourself.".encode())
 
 
-@contextlib.contextmanager
-def redirect_stdout_fd(target_fd):
-    """
-    Redirect the standard output to the target, including from child processes.
-    """
-
-    stdout_fileno = sys.stdout.fileno()
-    saved_stdout = os.dup(stdout_fileno)
-    os.close(stdout_fileno)
-    os.dup2(target_fd, stdout_fileno)
-
-    yield
-
-    os.close(stdout_fileno)
-    os.dup2(saved_stdout, stdout_fileno)
-
-
 class HelpTestCase(TestCase):
     """
     Test help invocation.
@@ -73,7 +54,7 @@ class HelpTestCase(TestCase):
         """
 
         with tempfile.NamedTemporaryFile() as tmpfile:
-            with redirect_stdout_fd(tmpfile.file.fileno()):
+            with redirect_stream(tmpfile.file.fileno()):
                 self.run_forklift('help')
 
             with open(tmpfile.name) as saved_output:
