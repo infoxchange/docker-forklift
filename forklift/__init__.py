@@ -74,6 +74,11 @@ def create_parser(services, drivers, command_required=True):
     for name, driver in drivers.items():
         driver.add_arguments(driver_options.add_argument)
 
+    # Dummy option to separate command line arguments from the ones
+    # generated from configuration files
+    add_argument('--zzzz', action='store_const', const=None,
+                 help=argparse.SUPPRESS)
+
     return parser
 
 
@@ -108,6 +113,7 @@ class Forklift(object):
         for conffile in self.configuration_files(conf):
             options.extend(self.file_configuration(conffile))
 
+        options.append('--zzzz')
         options.extend(argv[1:])
 
         parser = create_parser(self.services, self.drivers)
