@@ -160,6 +160,27 @@ class TestForklift(forklift.Forklift):
         'save_output_docker': SaveOutputDocker,
     }, forklift.Forklift.drivers)
 
+    def get_driver(self, conf):
+        """
+        Use the driver specified in a test as default.
+        """
+
+        return getattr(self, '_driver', None) \
+            or super().get_driver(conf)
+
+    @contextlib.contextmanager
+    def set_driver(self, driver):
+        """
+        Set the default driver to use in context.
+        """
+
+        setattr(self, '_driver', driver)
+
+        try:
+            yield
+        finally:
+            delattr(self, '_driver')
+
     services = merge_dicts({'test': TestService},
                            forklift.Forklift.services)
 
@@ -187,12 +208,16 @@ class TestCase(unittest.TestCase):
 
     forklift_class = TestForklift
 
+    default_driver = None
+
     def run_forklift(self, *args):
         """
         Run Forklift with specified arguments.
         """
 
-        return self.forklift_class(['forklift'] + list(args)).main()
+        instance = self.forklift_class(['forklift'] + list(args))
+        with instance.set_driver(self.default_driver):
+            return instance.main()
 
 
 @contextlib.contextmanager

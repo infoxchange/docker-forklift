@@ -60,6 +60,8 @@ class CommandsMixin(object):
     Mixin with tests to ensure commands are run correctly.
     """
 
+    default_driver = 'save_output_direct'
+
     def run_command(self, *command):
         """
         Run a command in Forklift.
@@ -67,8 +69,7 @@ class CommandsMixin(object):
         Override to pass extra options.
         """
 
-        return self.run_forklift('--driver', 'save_output_direct',
-                                 *command)
+        return self.run_forklift(*command)
 
     def test_exit_code(self):
         """
@@ -107,13 +108,14 @@ class DockerCommandsTestCase(CommandsMixin, TestCase):
     Test running commands via Docker.
     """
 
+    default_driver = 'save_output_docker'
+
     def run_command(self, *command):
         """
         Run a command via Docker.
         """
 
         return self.run_forklift(
-            '--driver', 'save_output_docker',
             '--rm',
             DOCKER_BASE_IMAGE,
             *command
@@ -125,13 +127,6 @@ class CaptureEnvironmentMixin(object):
     Mixin with tests to ensure environment is passed to commands correctly.
     """
 
-    @staticmethod
-    def driver():
-        """
-        The driver to use when running the commands.
-        """
-        raise NotImplementedError("Please override driver().")
-
     def capture_env(self, *args, prepend_args=None):
         """
         Run Forklift to capture the environment.
@@ -139,13 +134,13 @@ class CaptureEnvironmentMixin(object):
 
         prepend_args = prepend_args or []
 
-        forklift_args = [
-            '--driver', self.driver(),
-        ] + list(args) + [
-            '--',
-        ] + list(prepend_args) + [
-            '/usr/bin/env', '-0',
-        ]
+        if any(arg.startswith('--') for arg in prepend_args):
+            prepend_args.insert(0, '--')
+
+        forklift_args = \
+            list(args) + \
+            list(prepend_args) + \
+            ['/usr/bin/env', '-0']
 
         self.assertEqual(0, self.run_forklift(*forklift_args))
 
@@ -199,7 +194,8 @@ class CaptureEnvironmentMixin(object):
         with self.configuration_file({'services': ['test']}):
             self.assertEqual(
                 self.capture_env()['FOO'],
-                '{0}-test_app-2'.format(self.localhost_reference()))
+                '{0}-test_app-2'.format(self.localhost_reference())
+            )
 
         with self.configuration_file({
             'services': ['test'],
@@ -250,9 +246,7 @@ class DirectEnvironmentTestCase(CaptureEnvironmentMixin, TestCase):
     Test that environment is passed to the commands using direct driver.
     """
 
-    @staticmethod
-    def driver():
-        return 'save_output_direct'
+    default_driver = 'save_output_direct'
 
 
 @docker
@@ -261,9 +255,7 @@ class DockerEnvironmentTestCase(CaptureEnvironmentMixin, TestCase):
     Test environment passed to the commands using Docker.
     """
 
-    @staticmethod
-    def driver():
-        return 'save_output_docker'
+    default_driver = 'save_output_docker'
 
     @staticmethod
     def localhost_reference():
