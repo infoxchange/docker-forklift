@@ -230,3 +230,12 @@ developing.
 
 [dj-database-url]: https://github.com/kennethreitz/dj-database-url
 [xdg]: http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
+
+### Disable hostkey checking for localhost
+When you are using the sshd feature of forklift, ssh hostkey checking for localhost becomes annoying.
+
+Add the following to your `~/.ssh/config`:
+
+    Host localhost
+        StrictHostKeyChecking no
+        UserKnownHostsFile=/dev/null
