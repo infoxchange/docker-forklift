@@ -234,8 +234,4 @@ developing.
 ### Disable hostkey checking for localhost
 When you are using the sshd feature of forklift, ssh hostkey checking for localhost becomes annoying.
 
-Add the following to your `~/.ssh/config`:
-
-    Host localhost
-        StrictHostKeyChecking no
-        UserKnownHostsFile=/dev/null
+To avoid this, run the following:  `echo "NoHostAuthenticationForLocalhost yes" >> ~/.ssh/config`
