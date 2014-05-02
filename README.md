@@ -89,6 +89,11 @@ When running in SSH daemon mode, Forklift starts the container in the
 background and prints a command to SSH to it. It is up to the user to stop
 the container when no longer needed.
 
+Because the host keys of containers will be different every time, `ssh` will
+warn about the mismatch. To disable host checking for `localhost` only, put
+`NoHostAuthenticationForLocalhost yes` into the SSH configuration
+(`~/.ssh/config`).
+
 ### Recycler
 
 Forklift can clean up old containers and images on your system. By default
@@ -230,8 +235,3 @@ developing.
 
 [dj-database-url]: https://github.com/kennethreitz/dj-database-url
 [xdg]: http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
-
-### Disable hostkey checking for localhost
-When you are using the sshd feature of forklift, ssh hostkey checking for localhost becomes annoying.
-
-To avoid this, run the following:  `echo "NoHostAuthenticationForLocalhost yes" >> ~/.ssh/config`
