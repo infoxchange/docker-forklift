@@ -76,7 +76,8 @@ class Driver(object):
 
         A hook point for overriding in tests.
         """
-        return subprocess.call(command)
+
+        os.execvp(command[0], command)
 
     def base_environment(self):
         """
