@@ -24,7 +24,7 @@ assert version_info >= (3,), "Python 3 is required."
 
 setup(
     name='docker-forklift',
-    version='0.2.13',
+    version='0.2.14',
     description='Utility for running a container',
     author='Infoxchange Australia development team',
     author_email='devs@infoxchange.net.au',
