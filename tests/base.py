@@ -22,6 +22,7 @@ import operator
 import os
 import sys
 import subprocess
+import tempfile
 import unittest
 
 from functools import reduce
@@ -121,17 +122,27 @@ class SaveOutputMixin(forklift.drivers.Driver):
         """
         Return the output of the last command.
         """
-        return cls._last_output[0].decode()
+        return cls._last_output[0]
 
     def _run(self, command):
         """
         Run the command, saving the output.
         """
-        with subprocess.Popen(command, stdout=subprocess.PIPE) as process:
-            output, _ = process.communicate()
-        retcode = process.poll()
-        self._last_output[0] = output
-        return retcode
+
+        with tempfile.NamedTemporaryFile() as tmpfile:
+            with redirect_stream(tmpfile.file.fileno()):
+                pid = os.fork()
+                assert pid >= 0
+                if pid == 0:
+                    super()._run(command)
+                else:
+                    _, status = os.waitpid(pid, 0)
+                    retcode = status >> 8
+
+                    with open(tmpfile.name) as saved_output:
+                        self._last_output[0] = saved_output.read()
+
+                    return retcode
 
 
 class SaveOutputDirect(SaveOutputMixin, TestDriver, forklift.drivers.Direct):
