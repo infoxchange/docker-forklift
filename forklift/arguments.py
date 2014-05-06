@@ -34,6 +34,7 @@ def convert_to_args(conf, prefix=None):
     """
 
     args = []
+    conf = conf or {}
     prefix = prefix or ()
 
     if not prefix and 'environment' in conf:
