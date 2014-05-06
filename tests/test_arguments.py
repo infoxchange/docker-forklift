@@ -41,6 +41,8 @@ class ConvertToArgsTestCase(unittest.TestCase):
             '--nested.second', 'deeper',
         ])
 
+        self.assertEqual(convert_to_args(None), [])
+
     def test_environment(self):
         """
         Test 'environment' conversion.

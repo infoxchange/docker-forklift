@@ -158,7 +158,10 @@ class CaptureEnvironmentMixin(object):
 
         with tempfile.NamedTemporaryFile() as conffile:
             self.forklift_class.configuration_file_list.append(conffile.name)
-            yaml.dump(configuration, conffile, encoding='utf-8')
+            if isinstance(configuration, str):
+                conffile.write(configuration.encode())
+            else:
+                yaml.dump(configuration, conffile, encoding='utf-8')
 
             try:
                 yield
@@ -196,6 +199,16 @@ class CaptureEnvironmentMixin(object):
                 self.capture_env()['FOO'],
                 '{0}-test_app-2'.format(self.localhost_reference())
             )
+
+            empty_file = \
+                """
+                # An empty YAML file.
+                """
+            with self.configuration_file(empty_file):
+                self.assertEqual(
+                    self.capture_env()['FOO'],
+                    '{0}-test_app-2'.format(self.localhost_reference())
+                )
 
         with self.configuration_file({
             'services': ['test'],
