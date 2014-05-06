@@ -69,6 +69,10 @@ class Service(object):
     # or the command line.
     allow_override = ()
 
+    # A list of attributes which can be overridden as a list of arguments
+    # (i.e. hosts, urls)
+    allow_override_list = ()
+
     @classmethod
     def add_arguments(cls, add_argument):
         """
@@ -80,6 +84,9 @@ class Service(object):
 
         for param in cls.allow_override:
             add_argument('--{0}'.format(param))
+
+        for param in cls.allow_override_list:
+            add_argument('--{0}'.format(param), nargs='+')
 
     @classmethod
     def provide(cls, application_id, overrides=None):
@@ -229,7 +236,8 @@ class MemcacheService(Service):
     Memcache service for the application.
     """
 
-    allow_override = ('key_prefix', 'host', 'hosts')
+    allow_override = ('key_prefix', 'host')
+    allow_override_list = ('hosts',)
     providers = ('localhost',)
 
     DEFAULT_PORT = 11211
@@ -305,7 +313,8 @@ class ElasticsearchService(Service):
     Elasticsearch service for the application.
     """
 
-    allow_override = ('index_name', 'host', 'urls')
+    allow_override = ('index_name', 'host')
+    allow_override_list = ('urls',)
 
     def __init__(self, index_name, urls):
         self.index_name = index_name
