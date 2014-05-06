@@ -95,13 +95,14 @@ class Service(object):
         """
 
         overrides = overrides or {}
+        allowed_overrides = cls.allow_override + cls.allow_override_list
 
         for provider in cls.providers:
             service = getattr(cls, provider)(application_id)
 
             for key, value in vars(overrides).items():
                 if value is not None:
-                    if key in cls.allow_override:
+                    if key in allowed_overrides:
                         setattr(service, key, value)
                     else:
                         raise ImproperlyConfigured(
