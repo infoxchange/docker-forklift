@@ -51,6 +51,7 @@ def convert_to_args(conf, prefix=None):
         else:
             if not isinstance(value, (list, tuple)):
                 value = (value,)
+
             if len(value) > 0:
                 args.append('--' + '.'.join(arg_prefix))
                 for val in value:
