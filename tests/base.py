@@ -64,12 +64,14 @@ class TestService(forklift.services.Service):
     A test service.
     """
 
-    def __init__(self, host, one, two):
+    def __init__(self, host=None, one=None, two=None, list_=None):
         self.host = host
         self.one = one
         self.two = two
+        self.list = list_ or []
 
     allow_override = ('host', 'one', 'two')
+    allow_override_list = ('list',)
 
     is_available = True
 
@@ -78,7 +80,8 @@ class TestService(forklift.services.Service):
 
     def environment(self):
         return {
-            'FOO': '{host}-{one}-{two}'.format(**self.__dict__)
+            'FOO': '{host}-{one}-{two}'.format(**self.__dict__),
+            'BAR': '|'.join(self.list),
         }
 
     providers = ('here',)

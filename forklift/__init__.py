@@ -124,13 +124,17 @@ class Forklift(object):
         # with only the needed options
 
         driver = self.get_driver(conf)
-        enabled_services = {
-            name: service
-            for name, service in self.services.items()
-            if name in conf.services
-        }
+        # enabled_services = {
+        #     name: service
+        #     for name, service in self.services.items()
+        #     if name in conf.services
+        # }
 
-        parser = create_parser(enabled_services,
+        # FIXME: creating a parser with only the enabled_services (see above)
+        # causes problems because we then cannot parse the arguments for
+        # disabled services. Because services are separately namespaced
+        # including arguments for non-enabled services is sufficient for now
+        parser = create_parser(self.services,  # FIXME: enabled_services
                                {driver: self.drivers[driver]})
 
         self.conf = parser.parse_args(options)

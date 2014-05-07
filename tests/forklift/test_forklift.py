@@ -233,6 +233,21 @@ class CaptureEnvironmentMixin(object):
                     'otherhost-111-222'
                 )
 
+    def test_nargs(self):
+        """
+        Test multiple arguments
+        """
+
+        with self.configuration_file({
+            'services': ['test'],
+            'test': {
+                'list': ['1', '2'],
+            },
+        }):
+            self.assertEqual(
+                self.capture_env()['BAR'],
+                '1|2')
+
     def test_added_environment(self):
         """
         Test passing additional environment to the command.
