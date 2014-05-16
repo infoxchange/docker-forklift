@@ -221,14 +221,15 @@ class PostGISService(PostgreSQLService):
     CHECK_COMMAND = 'select PostGIS_full_version()'
 
 
-def pipe_split(string):
+def pipe_split(value):
     """
-    Split a pipe-separated string into an array.
-
-    Do nothing if an array already.
+    Split a pipe-separated string if it's the only value in an array.
     """
 
-    return string.split('|') if isinstance(string, str) else string
+    if len(value) == 1 and '|' in value[0]:
+        return value[0].split('|')
+    else:
+        return value
 
 
 @register('memcache')
@@ -403,7 +404,7 @@ class ElasticsearchService(Service):
         The Elasticsearch environment on the local machine.
         """
         return cls(index_name=application_id,
-                   urls='http://localhost:9200')
+                   urls=('http://localhost:9200',))
 
     providers = ('localhost',)
 
