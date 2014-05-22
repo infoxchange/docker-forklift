@@ -389,7 +389,8 @@ class ElasticsearchService(Service):
 
         for url in self.urls:
             try:
-                es_response = urllib.request.urlopen(url.geturl())
+                opener = urllib.request.FancyURLopener({})
+                es_response = opener.open(url.geturl())
                 es_status = json.loads(es_response.read().decode())
                 if es_status['status'] != 200:
                     return False
