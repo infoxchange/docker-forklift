@@ -19,7 +19,9 @@ Services that can be provided to running applications - base definitions.
 
 import socket
 
-from forklift.base import ImproperlyConfigured
+import docker
+
+from forklift.base import docker_client, ImproperlyConfigured
 from forklift.registry import Registry
 
 register = Registry()  # pylint:disable=invalid-name
@@ -105,6 +107,8 @@ class Service(object):
 
         for provider in cls.providers:
             service = getattr(cls, provider)(application_id)
+            if service is None:
+                continue
 
             for key, value in vars(overrides).items():
                 if value is not None:
@@ -137,3 +141,49 @@ class Service(object):
         """
 
         raise NotImplementedError("Please override environment().")
+
+
+class ContainerNotAvailable(Exception):
+    """
+    A container is not available.
+    """
+
+    pass
+
+
+def ensure_container(image, port, application_id, **kwargs):
+    """
+    Ensure a container for an application is running.
+
+    Parameters:
+        image - the image to run a container from
+        port - the port to forward from the container
+
+    Return value:
+        The forwarded port number
+    """
+
+    # TODO: better container name
+    container_name = image.replace('/', '_') + '__' + application_id
+
+    try:
+        try:
+            container_status = docker_client.inspect_container(container_name)
+        except docker.APIError:
+            docker_client.create_container(
+                image,
+                name=container_name,
+                ports=(port,),
+                **kwargs
+            )
+            container_status = docker_client.inspect_container(container_name)
+
+        if not container_status['State']['Running']:
+            docker_client.start(
+                container_name,
+                port_bindings={port: None},
+            )
+
+        return docker_client.port(container_name, port)[0]['HostPort']
+    except (ConnectionError, docker.APIError):
+        raise ContainerNotAvailable()

@@ -18,9 +18,15 @@ PostgreSQL database service.
 """
 
 import os
+import re
 import subprocess
 
-from .base import Service, register
+from .base import (
+    ContainerNotAvailable,
+    ensure_container,
+    Service,
+    register,
+)
 
 
 @register('postgres')
@@ -35,13 +41,15 @@ class PostgreSQL(Service):
 
     CHECK_COMMAND = 'select version()'
 
+    DEFAULT_PORT = 5432
+
     allow_override = ('name', 'host', 'port', 'user', 'password')
 
     # pylint:disable=too-many-arguments
     def __init__(self,
                  name,
                  host='localhost',
-                 port=5432,
+                 port=DEFAULT_PORT,
                  user=None,
                  password=None):
         self.host = host
@@ -97,7 +105,36 @@ class PostgreSQL(Service):
             user=application_id,
         )
 
-    providers = ('localhost',)
+    @classmethod
+    def container(cls, application_id):
+        """
+        PostgreSQL provided by a container.
+        """
+
+        try:
+            user = re.sub('[^a-z]', '_', application_id)
+            port = ensure_container(
+                image='paintedfox/postgresql',
+                port=cls.DEFAULT_PORT,
+                application_id=application_id,
+                environment={
+                    'USER': user,
+                    'DB': user,
+                    'PASS': user,
+                }
+            )
+
+            return cls(
+                host='localhost',
+                name=user,
+                user=user,
+                password=user,
+                port=port,
+            )
+        except ContainerNotAvailable:
+            return None
+
+    providers = ('localhost', 'container')
 
 
 @register('postgis')
@@ -109,3 +146,5 @@ class PostGIS(PostgreSQL):
     URL_SCHEME = 'postgis'
 
     CHECK_COMMAND = 'select PostGIS_full_version()'
+
+    providers = ('localhost', 'container')

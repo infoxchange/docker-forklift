@@ -43,6 +43,7 @@ setup(
     },
 
     install_requires=[
+        'docker-py',
         'pyxdg',
         'pyyaml',
     ],
