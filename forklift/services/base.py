@@ -18,8 +18,11 @@ Services that can be provided to running applications - base definitions.
 """
 
 import socket
+import sys
 
 import docker
+
+import requests.exceptions
 
 from forklift.base import docker_client, ImproperlyConfigured
 from forklift.registry import Registry
@@ -106,8 +109,10 @@ class Service(object):
         allowed_overrides = cls.allow_override + cls.allow_override_list
 
         for provider in cls.providers:
-            service = getattr(cls, provider)(application_id)
-            if service is None:
+            try:
+                service = getattr(cls, provider)(application_id)
+            except ProviderNotAvailable as ex:
+                print(ex, file=sys.stderr)
                 continue
 
             for key, value in vars(overrides).items():
@@ -143,12 +148,34 @@ class Service(object):
         raise NotImplementedError("Please override environment().")
 
 
-class ContainerNotAvailable(Exception):
+class ProviderNotAvailable(Exception):
     """
-    A container is not available.
+    A service provider is not available.
     """
 
     pass
+
+
+class DependencyRequired(ProviderNotAvailable):
+    """
+    A dependency is required to make a provider available.
+    """
+
+    def __init__(self, message, command=None):
+        super().__init__(message)
+        self.command = command
+
+
+class DockerImageRequired(DependencyRequired):
+    """
+    A Docker image is required to make a provider available.
+    """
+
+    def __init__(self, image):
+        super().__init__(
+            message="Docker image {0} is required.".format(image),
+            command='docker pull {0}'.format(image),
+        )
 
 
 def ensure_container(image, port, application_id, **kwargs):
@@ -170,6 +197,10 @@ def ensure_container(image, port, application_id, **kwargs):
         try:
             container_status = docker_client.inspect_container(container_name)
         except docker.APIError:
+            try:
+                docker_client.inspect_image(image)
+            except docker.APIError:
+                raise DockerImageRequired(image)
             docker_client.create_container(
                 image,
                 name=container_name,
@@ -185,5 +216,5 @@ def ensure_container(image, port, application_id, **kwargs):
             )
 
         return docker_client.port(container_name, port)[0]['HostPort']
-    except (ConnectionError, docker.APIError):
-        raise ContainerNotAvailable()
+    except requests.exceptions.ConnectionError:
+        raise ProviderNotAvailable("Cannot connect to Docker daemon.")

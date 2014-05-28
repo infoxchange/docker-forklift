@@ -20,7 +20,7 @@ Elasticsearch service.
 import json
 import urllib.request
 
-from .base import Service, pipe_split, register
+from .base import ensure_container, Service, pipe_split, register
 
 
 @register('elasticsearch')
@@ -120,4 +120,21 @@ class Elasticsearch(Service):
         return cls(index_name=application_id,
                    urls=('http://localhost:9200',))
 
-    providers = ('localhost',)
+    @classmethod
+    def container(cls, application_id):
+        """
+        Elasticsearch provided by a container.
+        """
+
+        port = ensure_container(
+            image='dockerfile/elasticsearch',
+            port=9200,
+            application_id=application_id,
+        )
+
+        return cls(
+            index_name=application_id,
+            urls=('http://localhost:{0}'.format(port),),
+        )
+
+    providers = ('localhost', 'container')

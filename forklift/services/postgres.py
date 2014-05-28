@@ -21,12 +21,7 @@ import os
 import re
 import subprocess
 
-from .base import (
-    ContainerNotAvailable,
-    ensure_container,
-    Service,
-    register,
-)
+from .base import ensure_container, Service, register
 
 
 @register('postgres')
@@ -111,28 +106,25 @@ class PostgreSQL(Service):
         PostgreSQL provided by a container.
         """
 
-        try:
-            user = re.sub('[^a-z]', '_', application_id)
-            port = ensure_container(
-                image='paintedfox/postgresql',
-                port=cls.DEFAULT_PORT,
-                application_id=application_id,
-                environment={
-                    'USER': user,
-                    'DB': user,
-                    'PASS': user,
-                }
-            )
+        user = re.sub('[^a-z]', '_', application_id)
+        port = ensure_container(
+            image='paintedfox/postgresql',
+            port=cls.DEFAULT_PORT,
+            application_id=application_id,
+            environment={
+                'USER': user,
+                'DB': user,
+                'PASS': user,
+            }
+        )
 
-            return cls(
-                host='localhost',
-                name=user,
-                user=user,
-                password=user,
-                port=port,
-            )
-        except ContainerNotAvailable:
-            return None
+        return cls(
+            host='localhost',
+            name=user,
+            user=user,
+            password=user,
+            port=port,
+        )
 
     providers = ('localhost', 'container')
 
