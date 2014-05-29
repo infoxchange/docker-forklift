@@ -111,8 +111,14 @@ class Service(object):
         for provider in cls.providers:
             try:
                 service = getattr(cls, provider)(application_id)
-            except ProviderNotAvailable as ex:
-                print(ex, file=sys.stderr)
+            except ProviderNotAvailable as exc:
+                print((
+                    "While trying '{provider}' provider for {service}: {exc}"
+                ).format(
+                    provider=provider,
+                    service=cls.__name__,
+                    exc=exc,
+                ), file=sys.stderr)
                 continue
 
             for key, value in vars(overrides).items():
