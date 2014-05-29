@@ -17,7 +17,13 @@
 Memcache service.
 """
 
-from .base import Service, port_open, register, split_host_port
+from .base import (
+    ensure_container,
+    Service,
+    port_open,
+    register,
+    split_host_port,
+)
 
 
 @register('memcache')
@@ -28,7 +34,7 @@ class Memcache(Service):
 
     allow_override = ('key_prefix', 'host')
     allow_override_list = ('hosts',)
-    providers = ('localhost',)
+    providers = ('localhost', 'container')
 
     DEFAULT_PORT = 11211
 
@@ -95,3 +101,20 @@ class Memcache(Service):
 
         return cls(key_prefix=application_id,
                    hosts=['localhost:{0}'.format(cls.DEFAULT_PORT)])
+
+    @classmethod
+    def container(cls, application_id):
+        """
+        Memcached provided by a container.
+        """
+
+        port = ensure_container(
+            image='fedora/memcached',
+            port=cls.DEFAULT_PORT,
+            application_id=application_id,
+        )
+
+        return cls(
+            key_prefix=application_id,
+            hosts=['localhost:{0}'.format(port)],
+        )
