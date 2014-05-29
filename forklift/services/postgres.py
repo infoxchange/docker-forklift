@@ -24,7 +24,7 @@ from .base import Service, register
 
 
 @register('postgres')
-class PostgreSQLService(Service):
+class PostgreSQL(Service):
     """
     PostgreSQL service provided by the host machine.
     """
@@ -101,7 +101,7 @@ class PostgreSQLService(Service):
 
 
 @register('postgis')
-class PostGISService(PostgreSQLService):
+class PostGIS(PostgreSQL):
     """
     PostgreSQL database with PostGIS support.
     """

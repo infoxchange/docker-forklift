@@ -21,7 +21,7 @@ from .base import Service, port_open, register
 
 
 @register('proxy')
-class ProxyService(Service):
+class Proxy(Service):
     """
     Proxy service for the application.
     """

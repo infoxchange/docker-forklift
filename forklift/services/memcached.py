@@ -21,7 +21,7 @@ from .base import Service, port_open, register, split_host_port
 
 
 @register('memcache')
-class MemcacheService(Service):
+class Memcache(Service):
     """
     Memcache service for the application.
     """

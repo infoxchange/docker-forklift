@@ -24,7 +24,7 @@ from .base import Service, pipe_split, register
 
 
 @register('elasticsearch')
-class ElasticsearchService(Service):
+class Elasticsearch(Service):
     """
     Elasticsearch service for the application.
     """

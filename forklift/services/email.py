@@ -21,7 +21,7 @@ from .base import Service, port_open, register
 
 
 @register('email')
-class EmailService(Service):
+class Email(Service):
     """
     An MTA for the application.
     """

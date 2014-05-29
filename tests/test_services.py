@@ -34,7 +34,7 @@ class ElasticsearchTestCase(unittest.TestCase):
         Test host get/set.
         """
 
-        service = forklift.services.ElasticsearchService(
+        service = forklift.services.Elasticsearch(
             'index',
             ('http://alpha:9200|http://beta:9200',))
 
@@ -59,7 +59,7 @@ class ElasticsearchTestCase(unittest.TestCase):
             'http://elsewhere:9200|http://elsewhere:9200'
         )
 
-        service = forklift.services.ElasticsearchService(
+        service = forklift.services.Elasticsearch(
             'index',
             ('http://localhost:9200',))
 
@@ -68,7 +68,7 @@ class ElasticsearchTestCase(unittest.TestCase):
         ])
         self.assertEqual(service.host, 'localhost')
 
-        service = forklift.services.ElasticsearchService(
+        service = forklift.services.Elasticsearch(
             'index',
             ('http://alpha:9200',
              'http://beta:9200'))
@@ -89,7 +89,7 @@ class MemcacheTestCase(unittest.TestCase):
         Test host get/set.
         """
 
-        service = forklift.services.MemcacheService(
+        service = forklift.services.Memcache(
             'index',
             ['alpha', 'beta:11222'])
 

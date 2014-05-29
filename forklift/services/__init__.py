@@ -20,8 +20,8 @@ Services that can be provided to running applications.
 from .base import register, Service
 
 # pylint:disable=unused-import
-from .elasticsearch import ElasticsearchService
-from .memcached import MemcacheService
-from .postgres import PostgreSQLService, PostGISService
-from .proxy import ProxyService
-from .syslog import SyslogService
+from .elasticsearch import Elasticsearch
+from .memcached import Memcache
+from .postgres import PostgreSQL, PostGIS
+from .proxy import Proxy
+from .syslog import Syslog

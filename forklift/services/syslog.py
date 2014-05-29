@@ -22,7 +22,7 @@ from .base import Service, port_open, register
 
 
 @register('syslog')
-class SyslogService(Service):
+class Syslog(Service):
     """
     Logging facility for the application.
     """
