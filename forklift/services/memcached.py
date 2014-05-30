@@ -108,7 +108,7 @@ class Memcache(Service):
         Memcached provided by a container.
         """
 
-        port = ensure_container(
+        container = ensure_container(
             image='fedora/memcached',
             port=cls.DEFAULT_PORT,
             application_id=application_id,
@@ -116,5 +116,5 @@ class Memcache(Service):
 
         return cls(
             key_prefix=application_id,
-            hosts=['localhost:{0}'.format(port)],
+            hosts=['localhost:{0}'.format(container.port)],
         )

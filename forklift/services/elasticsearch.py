@@ -19,6 +19,7 @@ Elasticsearch service.
 
 import json
 import urllib.request
+from os.path import join
 
 from .base import ensure_container, Service, pipe_split, register
 
@@ -126,15 +127,27 @@ class Elasticsearch(Service):
         Elasticsearch provided by a container.
         """
 
-        port = ensure_container(
+        container = ensure_container(
             image='dockerfile/elasticsearch',
             port=9200,
             application_id=application_id,
+            data_dir='/data',
         )
+
+        config_path = join(container.data_dir, 'elasticsearch.yml')
+        with open(config_path, 'w') as config:
+            print(
+                """
+                path:
+                    data: /data/data
+                    logs: /data/log
+                """,
+                file=config,
+            )
 
         return cls(
             index_name=application_id,
-            urls=('http://localhost:{0}'.format(port),),
+            urls=('http://localhost:{0}'.format(container.port),),
         )
 
     providers = ('localhost', 'container')

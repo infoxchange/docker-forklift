@@ -107,10 +107,11 @@ class PostgreSQL(Service):
         """
 
         user = re.sub('[^a-z]', '_', application_id)
-        port = ensure_container(
+        container = ensure_container(
             image='paintedfox/postgresql',
             port=cls.DEFAULT_PORT,
             application_id=application_id,
+            data_dir='/data',
             environment={
                 'USER': user,
                 'DB': user,
@@ -123,7 +124,7 @@ class PostgreSQL(Service):
             name=user,
             user=user,
             password=user,
-            port=port,
+            port=container.port,
         )
 
     providers = ('localhost', 'container')

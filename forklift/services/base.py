@@ -17,12 +17,16 @@
 Services that can be provided to running applications - base definitions.
 """
 
+from collections import namedtuple
+import os
 import socket
 import sys
 
 import docker
 
 import requests.exceptions
+
+from xdg.BaseDirectory import save_cache_path
 
 from forklift.base import docker_client, ImproperlyConfigured
 from forklift.registry import Registry
@@ -184,20 +188,45 @@ class DockerImageRequired(DependencyRequired):
         )
 
 
-def ensure_container(image, port, application_id, **kwargs):
+ContainerInfo = namedtuple('ContainerInfo', ['port', 'data_dir'])
+
+
+def cache_directory(container_name):
+    """
+    A directory to cache the container data in.
+    """
+
+    return os.path.join(save_cache_path('forklift'), container_name)
+
+
+def ensure_container(image,
+                     port,
+                     application_id,
+                     data_dir=None,
+                     **kwargs):
     """
     Ensure a container for an application is running.
 
     Parameters:
         image - the image to run a container from
         port - the port to forward from the container
+        application_id - the application ID, for naming the container
+        data_dir - the directory to persistently mount inside the container
 
     Return value:
-        The forwarded port number
+        An object with the following attributes:
+            port - the forwarded port number
+            data_dir - if asked for, path for the persistently mounted
+            directory inside the container
     """
 
     # TODO: better container name
     container_name = image.replace('/', '_') + '__' + application_id
+
+    if data_dir is not None:
+        cached_dir = cache_directory(container_name)
+    else:
+        cached_dir = None
 
     try:
         try:
@@ -207,6 +236,11 @@ def ensure_container(image, port, application_id, **kwargs):
                 docker_client.inspect_image(image)
             except docker.APIError:
                 raise DockerImageRequired(image)
+
+            if data_dir is not None:
+                # Ensure the data volume is mounted
+                kwargs.setdefault('volumes', {})[data_dir] = cached_dir
+
             docker_client.create_container(
                 image,
                 name=container_name,
@@ -216,11 +250,16 @@ def ensure_container(image, port, application_id, **kwargs):
             container_status = docker_client.inspect_container(container_name)
 
         if not container_status['State']['Running']:
-            docker_client.start(
-                container_name,
-                port_bindings={port: None},
-            )
+            start_args = {
+                'port_bindings': {port: None},
+            }
+            if data_dir is not None:
+                start_args['binds'] = {
+                    cached_dir: data_dir,
+                }
+            docker_client.start(container_name, **start_args)
 
-        return docker_client.port(container_name, port)[0]['HostPort']
+        port = docker_client.port(container_name, port)[0]['HostPort']
+        return ContainerInfo(port=port, data_dir=cached_dir)
     except requests.exceptions.ConnectionError:
         raise ProviderNotAvailable("Cannot connect to Docker daemon.")
