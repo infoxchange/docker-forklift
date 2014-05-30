@@ -3,11 +3,14 @@ python:
     - "3.4"
     - "3.3"
     - "3.2"
-before_install:
+install:
     - pip install -r dev_requirements.txt
+    - pip install coveralls
 script:
     - .githooks/pre-commit -f
     - ./runtests.sh
+after_success:
+    - coveralls
 deploy:
     provider: pypi
     user: ixa
