@@ -7,7 +7,7 @@ before_install:
     - pip install -r dev_requirements.txt
 script:
     - .githooks/pre-commit -f
-    - python setup.py test
+    - ./runtests.sh
 deploy:
     provider: pypi
     user: ixa
