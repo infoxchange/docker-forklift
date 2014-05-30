@@ -28,9 +28,10 @@ import subprocess
 import sys
 import time
 
+import docker
+
 from forklift.base import (
     DEVNULL,
-    docker_client,
     free_port,
     ImproperlyConfigured,
 )
@@ -298,11 +299,11 @@ class Docker(Driver):
                             stderr=DEVNULL)
             subprocess.check_call(['mkdir', '-p', mount_root])
 
-            driver = docker_client.inspect_container(container)['Driver']
+            driver = docker.Client().inspect_container(container)['Driver']
             rootfs_path = \
                 '/var/lib/docker/{driver}/mnt/{container}'.format(
                     driver=driver,
-                    container=container.decode(),
+                    container=container,
                 )
 
             # AUFS and DeviceMapper use different paths
@@ -364,6 +365,7 @@ class Docker(Driver):
             'echo \'{user} ALL=(ALL) NOPASSWD: ALL\' >> /etc/sudoers',
             'mkdir -p /var/run/sshd',
             'chmod 0755 /var/run/sshd',
+            'echo Starting SSH...',
             '/usr/sbin/sshd -D',
         ]
 
@@ -378,7 +380,7 @@ class Docker(Driver):
             ' && '.join(cmd.format(**args) for cmd in commands),
             use_sshd=True
         )
-        container = subprocess.check_output(command).strip()
+        container = subprocess.check_output(command).decode().strip()
         self.mount_root(container)
 
         ssh_command, ssh_available = self.ssh_command(container, identity)
@@ -400,7 +402,9 @@ class Docker(Driver):
         succeeded.
         """
 
-        ssh_port = docker_client.port(container, 22)
+        with docker.Client() as docker_client:
+            ssh_port = docker_client.port(container, 22)[0]['HostPort']
+
         ssh_command = [
             'ssh',
             '{0}@localhost'.format(self.conf.user),

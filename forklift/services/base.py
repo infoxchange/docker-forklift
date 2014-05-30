@@ -28,7 +28,7 @@ import requests.exceptions
 
 from xdg.BaseDirectory import save_cache_path
 
-from forklift.base import docker_client, ImproperlyConfigured
+from forklift.base import ImproperlyConfigured
 from forklift.registry import Registry
 
 register = Registry()  # pylint:disable=invalid-name
@@ -219,6 +219,8 @@ def ensure_container(image,
             data_dir - if asked for, path for the persistently mounted
             directory inside the container
     """
+
+    docker_client = docker.Client()
 
     # TODO: better container name
     container_name = image.replace('/', '_') + '__' + application_id

@@ -20,8 +20,6 @@ Common declarations.
 import os
 import socket
 
-import docker
-
 
 def free_port():
     """
@@ -45,6 +43,3 @@ try:
     DEVNULL = subprocess.DEVNULL  # pylint:disable=no-member
 except AttributeError:
     DEVNULL = open(os.devnull)
-
-
-docker_client = docker.Client()  # pylint:disable=invalid-name
