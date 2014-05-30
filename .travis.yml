@@ -4,6 +4,7 @@ python:
     - "3.3"
     - "3.2"
 install:
+    - npm install jshint
     - pip install -r dev_requirements.txt
     - pip install coveralls
 script:
