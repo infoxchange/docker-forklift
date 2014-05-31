@@ -148,13 +148,6 @@ class Driver(object):
         add_argument('--serve_port', type=int, default=None,
                      help="The port to expose the application on")
 
-    def print_url(self):
-        """
-        Print the URL the container is accessible on.
-        """
-
-        print('http://localhost:{0}'.format(self.serve_port()))
-
 
 def ip_address(ifname):
     """
