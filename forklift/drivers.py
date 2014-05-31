@@ -425,9 +425,12 @@ class Docker(Driver):
         for _ in range(1, 120):
             try:
                 subprocess.check_call(
-                    ssh_command + ['-o', 'StrictHostKeyChecking=no',
-                                   '-o', 'PasswordAuthentication=no',
-                                   'true'],
+                    ssh_command + [
+                        '-o', 'StrictHostKeyChecking=no',
+                        '-o', 'PasswordAuthentication=no',
+                        '-o', 'NoHostAuthenticationForLocalhost=yes',
+                        '/bin/true',
+                    ],
                     stdin=DEVNULL,
                     stdout=DEVNULL,
                     stderr=DEVNULL,
