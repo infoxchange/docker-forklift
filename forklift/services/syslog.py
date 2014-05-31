@@ -103,6 +103,8 @@ class Syslog(Service):
         server = ThreadedUDPServer(('0.0.0.0', port), SyslogHandler)
         server_thread = threading.Thread(target=server.serve_forever)
         server_thread.daemon = True
+        # TODO: Must create a new process so that exec() doesn't kill the
+        # thread
         server_thread.start()
 
         return cls('localhost', port)

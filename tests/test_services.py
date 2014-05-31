@@ -19,9 +19,13 @@ Tests for services provided by Forklift.
 
 import unittest
 
+import threading
+import socketserver
 from urllib.parse import urlparse
 
 import forklift.services
+import forklift.services.base as base
+from forklift.base import free_port
 
 
 class ElasticsearchTestCase(unittest.TestCase):
@@ -140,3 +144,42 @@ class ServicesAPITestCase(unittest.TestCase):
 
             assert hasattr(service, 'environment')
             assert hasattr(service, 'available')
+
+
+class BaseTestCase(unittest.TestCase):
+    """
+    Test base services functions.
+    """
+
+    def test_port_open(self):
+        """
+        Test port_open.
+        """
+
+        class DummyHandler(socketserver.BaseRequestHandler):
+            """
+            A do-nothing handler.
+            """
+
+            def handle(self):
+                pass
+
+        class DummyServer(socketserver.ThreadingMixIn,
+                          socketserver.TCPServer):
+            """
+            A do-nothing server.
+            """
+
+            pass
+
+        port = free_port()
+        self.assertFalse(base.port_open('localhost', port))
+
+        server = DummyServer(('0.0.0.0', port), DummyHandler)
+        server_thread = threading.Thread(target=server.serve_forever)
+        server_thread.start()
+
+        try:
+            self.assertTrue(base.port_open('localhost', port))
+        finally:
+            server.shutdown()

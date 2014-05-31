@@ -2,3 +2,4 @@
 
 coverage erase
 coverage run -m unittest "$@"
+coverage report
