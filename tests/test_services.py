@@ -182,13 +182,14 @@ class EmailTestCase(unittest.TestCase):
 
                 import smtplib
 
-                with smtplib.SMTP(host=env['EMAIL_HOST'],
-                                  port=env['EMAIL_PORT']) as smtp:
-                    smtp.sendmail(
-                        from_addr='forklift@example.com',
-                        to_addrs=('destination@example.com',),
-                        msg='Email message',
-                    )
+                smtp = smtplib.SMTP(host=env['EMAIL_HOST'],
+                                    port=env['EMAIL_PORT'])
+                smtp.sendmail(
+                    from_addr='forklift@example.com',
+                    to_addrs=('destination@example.com',),
+                    msg='Email message',
+                )
+                smtp.quit()
 
                 # Give the server a chance to process the message
                 sleep(1)
