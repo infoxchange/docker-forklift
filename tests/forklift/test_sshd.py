@@ -96,7 +96,9 @@ class SSHTestCase(TestCase):
 
             self.assertTrue(available)
             self.assertEqual(0, subprocess.call(
-                command + ' /bin/true',
+                command +
+                ' -o NoHostAuthenticationForLocalhost=yes' +
+                ' /bin/true',
                 shell=True
             ))
         finally:
