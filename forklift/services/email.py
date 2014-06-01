@@ -17,6 +17,7 @@
 Proxy service.
 """
 
+from forklift.base import free_port
 from .base import Service, port_open, register
 
 
@@ -56,5 +57,30 @@ class Email(Service):
         The MTA on the local machine.
         """
         return cls(host='localhost')
+
+    # pylint:disable=unused-argument
+    @classmethod
+    def stdout(cls, application_id):
+        """
+        Mailer printing all the messages to the standard output of Forklift.
+        """
+
+        from forklift.services.satellite import start_satellite
+        from smtpd import DebuggingServer
+
+        port = free_port()
+
+        def run_server():
+            """
+            Run the syslog server.
+            """
+
+            DebuggingServer(('0.0.0.0', port), None)
+            import asyncore
+            asyncore.loop()
+
+        start_satellite(target=run_server)
+
+        return cls('localhost', port)
 
     providers = ('localhost',)

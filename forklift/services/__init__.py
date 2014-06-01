@@ -21,6 +21,7 @@ from .base import register, Service
 
 # pylint:disable=unused-import
 from .elasticsearch import Elasticsearch
+from .email import Email
 from .memcached import Memcache
 from .postgres import PostgreSQL, PostGIS
 from .proxy import Proxy

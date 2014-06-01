@@ -160,6 +160,48 @@ class SyslogTestCase(unittest.TestCase):
                 self.assertEqual("<14>Logging message\x00\n", log)
 
 
+class EmailTestCase(unittest.TestCase):
+    """
+    Test email service.
+    """
+
+    def test_stdout(self):
+        """
+        Test printing to stdout with the fallback provider.
+        """
+
+        with tempfile.NamedTemporaryFile() as tmpfile:
+            with redirect_stream(tmpfile.file.fileno()):
+                email = forklift.services.Email.stdout('fake_app')
+
+                # Wait for the server to start
+                sleep(1)
+
+                self.assertTrue(email.available())
+                env = email.environment()
+
+                import smtplib
+
+                with smtplib.SMTP(host=env['EMAIL_HOST'],
+                                  port=env['EMAIL_PORT']) as smtp:
+                    smtp.sendmail(
+                        from_addr='forklift@example.com',
+                        to_addrs=('destination@example.com',),
+                        msg='Email message',
+                    )
+
+                # Give the server a chance to process the message
+                sleep(1)
+
+            with open(tmpfile.name) as saved_output:
+                log = saved_output.read().splitlines()
+                self.assertEqual([
+                    '---------- MESSAGE FOLLOWS ----------',
+                    'Email message',
+                    '------------ END MESSAGE ------------',
+                ], log)
+
+
 class ServicesAPITestCase(unittest.TestCase):
     """
     Test all services match the API
