@@ -38,8 +38,8 @@ def start_satellite(target, args=(), kwargs=None, stop=None):
             target=target,
             args=args,
             kwargs=kwargs,
-            daemon=True,
         )
+        payload.daemon = True
         payload.start()
 
         # Cannot wait for the process that's not our child
