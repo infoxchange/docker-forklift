@@ -19,13 +19,18 @@ Tests for services provided by Forklift.
 
 import unittest
 
-import threading
+import socket
 import socketserver
+import threading
+import tempfile
+from time import sleep
 from urllib.parse import urlparse
 
 import forklift.services
 import forklift.services.base as base
 from forklift.base import free_port
+
+from tests.base import redirect_stream
 
 
 class ElasticsearchTestCase(unittest.TestCase):
@@ -108,6 +113,51 @@ class MemcacheTestCase(unittest.TestCase):
         self.assertEqual(service.hosts, [
             'elsewhere:11211',
         ])
+
+
+class SyslogTestCase(unittest.TestCase):
+    """
+    Test Syslog service.
+    """
+
+    def test_stdout(self):
+        """
+        Test printing to stdout with the fallback Syslog provider.
+        """
+
+        with tempfile.NamedTemporaryFile() as tmpfile:
+            with redirect_stream(tmpfile.file.fileno()):
+                syslog = forklift.services.Syslog.stdout('fake_app')
+                self.assertTrue(syslog.available())
+                env = syslog.environment()
+
+                import logging
+                from logging.handlers import SysLogHandler
+
+                handler = SysLogHandler(
+                    address=(env['SYSLOG_SERVER'], int(env['SYSLOG_PORT'])),
+                    socktype=socket.SOCK_DGRAM
+                    if env['SYSLOG_PROTO'] == 'udp'
+                    else socket.SOCK_STREAM,
+                )
+
+                handler.handle(logging.LogRecord(
+                    name='logname',
+                    level=logging.INFO,
+                    pathname='/fake/file',
+                    lineno=314,
+                    msg="Logging %s",
+                    args="message",
+                    exc_info=None,
+                ))
+                handler.close()
+
+                # Give the server a chance to process the message
+                sleep(1)
+
+            with open(tmpfile.name) as saved_output:
+                log = saved_output.read()
+                self.assertEqual("<14>Logging message\x00\n", log)
 
 
 class ServicesAPITestCase(unittest.TestCase):

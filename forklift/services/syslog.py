@@ -81,8 +81,8 @@ class Syslog(Service):
         """
 
         # Adapted from https://gist.github.com/marcelom/4218010
+        from forklift.services.satellite import start_satellite
         import socketserver
-        import threading
 
         class SyslogHandler(socketserver.BaseRequestHandler):
             """
@@ -92,20 +92,17 @@ class Syslog(Service):
                 data = self.request[0].strip().decode()
                 print(data)
 
-        class ThreadedUDPServer(socketserver.ThreadingMixIn,
-                                socketserver.UDPServer):
-            """
-            Threaded UDP server.
-            """
-            pass
-
         port = free_port()
-        server = ThreadedUDPServer(('0.0.0.0', port), SyslogHandler)
-        server_thread = threading.Thread(target=server.serve_forever)
-        server_thread.daemon = True
-        # TODO: Must create a new process so that exec() doesn't kill the
-        # thread
-        server_thread.start()
+
+        def run_server():
+            """
+            Run the syslog server.
+            """
+
+            server = socketserver.UDPServer(('0.0.0.0', port), SyslogHandler)
+            server.serve_forever()
+
+        start_satellite(target=run_server)
 
         return cls('localhost', port)
 
