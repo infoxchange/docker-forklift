@@ -336,30 +336,23 @@ class Docker(Driver):
                 ssh_key = id_file.read().strip()
 
         commands = [
-            'apt-get -qq update',
-            'DEBIAN_FRONTEND=noninteractive apt-get -qq install ssh sudo',
-            'invoke-rc.d ssh stop',
-            ('echo \'AuthorizedKeysFile /etc/ssh/%u/authorized_keys\' >> ' +
-             '/etc/ssh/sshd_config'),
-            'echo \'PermitUserEnvironment yes\' >> /etc/ssh/sshd_config',
+            'DEBIAN_FRONTEND=noninteractive apt-get -qq install dropbear sudo',
         ] + [
-            'echo \'{0}={1}\' >> /etc/environment'.format(*env)
+            'echo \'{0}={1}\' >> /etc/profile'.format(*env)
             for env in self.environment().items()
         ] + [
             '(useradd -m {user} || true)',
-            'mkdir -p /etc/ssh/{user}',
-            'echo \'{ssh_key}\' > /etc/ssh/{user}/authorized_keys',
+            'mkdir -p ~{user}/.ssh',
+            'echo \'{ssh_key}\' >> ~{user}/.ssh/authorized_keys',
+            'chown -R {user} ~{user}/.ssh',
+            'chmod -R go-rwx ~{user}/.ssh',
             'chsh -s /bin/bash {user}',
             'usermod -p zzz {user}',
-            'chown -R --from={user} {host_uid} ~app',
+            'chown -R --from={user} {host_uid} ~{user}',
             'usermod -u {host_uid} {user}',
-            'chown -R {user} /etc/ssh/{user}',
-            'chmod -R go-rwx /etc/ssh/{user}',
             'echo \'{user} ALL=(ALL) NOPASSWD: ALL\' >> /etc/sudoers',
-            'mkdir -p /var/run/sshd',
-            'chmod 0755 /var/run/sshd',
             'echo Starting SSH...',
-            '/usr/sbin/sshd -D',
+            '/usr/sbin/dropbear -F',
         ]
 
         args = {
@@ -409,12 +402,15 @@ class Docker(Driver):
         if identity:
             ssh_command += ('-i', identity)
 
-        for _ in range(1, 120):
+        for _ in range(1, 60):
             try:
                 subprocess.check_call(
-                    ssh_command + ['-o', 'StrictHostKeyChecking=no',
-                                   '-o', 'PasswordAuthentication=no',
-                                   'true'],
+                    ssh_command + [
+                        '-o', 'StrictHostKeyChecking=no',
+                        '-o', 'PasswordAuthentication=no',
+                        '-o', 'NoHostAuthenticationForLocalhost=yes',
+                        '/bin/true',
+                    ],
                     stdin=DEVNULL,
                     stdout=DEVNULL,
                     stderr=DEVNULL,
