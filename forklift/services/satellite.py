@@ -18,8 +18,9 @@ Satellite processes started by Forklift itself to provide services.
 """
 
 import os
-import threading
+from multiprocessing import Process  # pylint:disable=no-name-in-module
 from time import sleep
+from threading import Thread
 
 
 def start_satellite(target, args=(), kwargs=None, stop=None):
@@ -31,25 +32,31 @@ def start_satellite(target, args=(), kwargs=None, stop=None):
     if kwargs is None:
         kwargs = {}
 
-    pid = os.fork()
-    if pid == 0:
-        # Run target daemonized.
-        payload = threading.Thread(
-            target=target,
-            args=args,
-            kwargs=kwargs,
-        )
-        payload.daemon = True
-        payload.start()
+    proc = Process(target=_satellite, args=(target, args, kwargs, stop))
+    proc.daemon = True
+    proc.start()
 
-        # Cannot wait for the process that's not our child
-        ppid = os.getppid()
-        try:
-            while True:
-                os.kill(ppid, 0)
-                sleep(1)
-        except OSError:
-            if stop:
-                stop()
 
-        os._exit(os.EX_OK)  # pylint:disable=protected-access
+def _satellite(target, args, kwargs, stop):
+    """
+    Run the target, killing it after the parent exits.
+    """
+
+    # Run target daemonized.
+    payload = Thread(
+        target=target,
+        args=args,
+        kwargs=kwargs,
+    )
+    payload.daemon = True
+    payload.start()
+
+    # Cannot wait for the process that's not our child
+    ppid = os.getppid()
+    try:
+        while True:
+            os.kill(ppid, 0)
+            sleep(1)
+    except OSError:
+        if stop:
+            stop()
