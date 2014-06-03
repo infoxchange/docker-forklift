@@ -19,7 +19,6 @@ Drivers that can execute applications.
 
 
 import fcntl
-import json
 import os
 import pwd
 import re
@@ -29,7 +28,13 @@ import subprocess
 import sys
 import time
 
-from forklift.base import DEVNULL, free_port, ImproperlyConfigured
+import docker
+
+from forklift.base import (
+    DEVNULL,
+    free_port,
+    ImproperlyConfigured,
+)
 from forklift.registry import Registry
 
 
@@ -142,13 +147,6 @@ class Driver(object):
 
         add_argument('--serve_port', type=int, default=None,
                      help="The port to expose the application on")
-
-    def print_url(self):
-        """
-        Print the URL the container is accessible on.
-        """
-
-        print('http://localhost:{0}'.format(self.serve_port()))
 
 
 def ip_address(ifname):
@@ -281,18 +279,6 @@ class Docker(Driver):
 
         return docker_command
 
-    @staticmethod
-    def container_details(container):
-        """
-        Get the details of a container.
-        """
-        return json.loads(
-            # pylint:disable=no-member
-            subprocess.check_output(
-                ['docker', 'inspect', container]
-            ).decode()
-        )[0]
-
     def mount_root(self, container):
         """
         Mount the container's root directory on the host.
@@ -306,11 +292,11 @@ class Docker(Driver):
                             stderr=DEVNULL)
             subprocess.check_call(['mkdir', '-p', mount_root])
 
-            driver = self.container_details(container)['Driver']
+            driver = docker.Client().inspect_container(container)['Driver']
             rootfs_path = \
                 '/var/lib/docker/{driver}/mnt/{container}'.format(
                     driver=driver,
-                    container=container.decode(),
+                    container=container,
                 )
 
             # AUFS and DeviceMapper use different paths
@@ -380,7 +366,7 @@ class Docker(Driver):
             ' && '.join(cmd.format(**args) for cmd in commands),
             use_sshd=True
         )
-        container = subprocess.check_output(command).strip()
+        container = subprocess.check_output(command).decode().strip()
         self.mount_root(container)
 
         ssh_command, ssh_available = self.ssh_command(container, identity)
@@ -402,9 +388,9 @@ class Docker(Driver):
         succeeded.
         """
 
-        container_details = self.container_details(container)
-        port_config = container_details['HostConfig']['PortBindings']
-        ssh_port = port_config['22/tcp'][0]['HostPort']
+        with docker.Client() as docker_client:
+            ssh_port = docker_client.port(container, 22)[0]['HostPort']
+
         ssh_command = [
             'ssh',
             '{0}@localhost'.format(self.conf.user),

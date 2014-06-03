@@ -22,35 +22,30 @@ from sys import version_info
 
 assert version_info >= (3,), "Python 3 is required."
 
-setup(
-    name='docker-forklift',
-    version='0.2.16',
-    description='Utility for running a container',
-    author='Infoxchange Australia development team',
-    author_email='devs@infoxchange.net.au',
-    url='https://github.com/infoxchange/docker-forklift',
-    license='Apache 2.0',
-    long_description=open('README.md').read(),
+with open('requirements.txt') as requirements, \
+        open('test_requirements.txt') as test_requirements:
+    setup(
+        name='docker-forklift',
+        version='0.2.16',
+        description='Utility for running a container',
+        author='Infoxchange Australia development team',
+        author_email='devs@infoxchange.net.au',
+        url='https://github.com/infoxchange/docker-forklift',
+        license='Apache 2.0',
+        long_description=open('README.md').read(),
 
-    packages=find_packages(exclude=['tests']),
-    package_data={
-        'forklift': ['README.md'],
-    },
-    entry_points={
-        'console_scripts': [
-            'forklift = forklift:main',
-        ],
-    },
+        packages=find_packages(exclude=['tests']),
+        package_data={
+            'forklift': ['README.md'],
+        },
+        entry_points={
+            'console_scripts': [
+                'forklift = forklift:main',
+            ],
+        },
 
-    install_requires=[
-        'pyxdg',
-        'pyyaml',
-    ],
+        install_requires=requirements.read().splitlines(),
 
-    test_suite='tests',
-    tests_require=[
-        'pep8',
-        'pylint',
-        'pylint-mccabe',
-    ],
-)
+        test_suite='tests',
+        tests_require=test_requirements.read().splitlines(),
+    )

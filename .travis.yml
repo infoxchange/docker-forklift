@@ -3,13 +3,15 @@ python:
     - "3.4"
     - "3.3"
     - "3.2"
-before_install:
+install:
     - npm install jshint
-    - pip install pep8 pylint pylint_mccabe
-    - pip install pyxdg pyyaml
+    - pip install -r dev_requirements.txt
+    - pip install coveralls
 script:
     - .githooks/pre-commit -f
-    - python setup.py test
+    - ./runtests.sh
+after_success:
+    - coveralls
 deploy:
     provider: pypi
     user: ixa
