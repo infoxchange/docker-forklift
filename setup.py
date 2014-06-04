@@ -26,7 +26,7 @@ with open('requirements.txt') as requirements, \
         open('test_requirements.txt') as test_requirements:
     setup(
         name='docker-forklift',
-        version='0.2.17',
+        version='0.2.18',
         description='Utility for running a container',
         author='Infoxchange Australia development team',
         author_email='devs@infoxchange.net.au',
@@ -36,7 +36,11 @@ with open('requirements.txt') as requirements, \
 
         packages=find_packages(exclude=['tests']),
         package_data={
-            'forklift': ['README.md'],
+            'forklift': [
+                'README.md',
+                'requirements.txt',
+                'test_requirements.txt',
+            ],
         },
         entry_points={
             'console_scripts': [
