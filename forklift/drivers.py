@@ -350,6 +350,8 @@ class Docker(Driver):
             'usermod -p zzz {user}',
             'chown -R --from={user} {host_uid} ~{user}',
             'usermod -u {host_uid} {user}',
+            'chown {user} ~{user}',
+            'chmod go-w ~{user}',
             'echo \'{user} ALL=(ALL) NOPASSWD: ALL\' >> /etc/sudoers',
             'echo Starting SSH...',
             '/usr/sbin/dropbear -F',
