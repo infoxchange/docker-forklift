@@ -42,6 +42,10 @@ def _satellite(target, args, kwargs, stop):
     Run the target, killing it after the parent exits.
     """
 
+    # Make sure signals sent by the shell aren't propagated to the satellite
+    # process
+    os.setpgrp()
+
     # Run target daemonized.
     payload = Thread(
         target=target,
