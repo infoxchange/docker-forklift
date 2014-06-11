@@ -338,7 +338,9 @@ class Docker(Driver):
         commands = [
             'DEBIAN_FRONTEND=noninteractive apt-get -qq install dropbear sudo',
         ] + [
-            'echo \'{0}={1}\' >> /etc/profile'.format(*env)
+            # TODO: this only passes the environment to shells.
+            # Commands run directly (ssh ... command) get no environment.
+            'echo \'export {0}={1}\' >> /etc/profile'.format(*env)
             for env in self.environment().items()
         ] + [
             '(useradd -m {user} || true)',

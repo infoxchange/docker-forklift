@@ -253,3 +253,17 @@ def redirect_stream(target_fd, stream=None):
 
     os.close(stream_fileno)
     os.dup2(saved_stream, stream_fileno)
+
+
+def parse_environment(env_string):
+    """
+    Parse the output of 'env -0' into a dictionary.
+    """
+
+    if type(env_string) is bytes:
+        env_string = env_string.decode()
+
+    return dict(
+        item.split('=', 1)
+        for item in env_string.rstrip('\0').split('\0')
+    )
