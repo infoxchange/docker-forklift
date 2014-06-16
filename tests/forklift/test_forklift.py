@@ -26,6 +26,7 @@ import forklift
 from forklift.drivers import ip_address
 from tests.base import (
     docker,
+    parse_environment,
     redirect_stream,
     DOCKER_BASE_IMAGE,
     SaveOutputMixin,
@@ -144,11 +145,7 @@ class CaptureEnvironmentMixin(object):
 
         self.assertEqual(0, self.run_forklift(*forklift_args))
 
-        output = SaveOutputMixin.last_output()
-        return dict(
-            item.split('=', 1)
-            for item in output.rstrip('\0').split('\0')
-        )
+        return parse_environment(SaveOutputMixin.last_output())
 
     @contextlib.contextmanager
     def configuration_file(self, configuration):

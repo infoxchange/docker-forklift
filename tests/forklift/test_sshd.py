@@ -24,7 +24,9 @@ from tests.base import (
     docker,
     DOCKER_BASE_IMAGE,
     merge_dicts,
+    parse_environment,
     TestCase,
+    TestDriver,
     TestForklift,
 )
 
@@ -32,7 +34,7 @@ from forklift.base import DEVNULL
 from forklift.drivers import Docker
 
 
-class SaveSSHDetailsDocker(Docker):
+class SaveSSHDetailsDocker(TestDriver, Docker):
     """
     Save SSH command the container ran.
     """
@@ -94,13 +96,36 @@ class SSHTestCase(TestCase):
 
             command, available, container = SaveSSHDetailsDocker.last_details()
 
+            def in_container(inside_command):
+                """
+                Command line to execute a command inside the container
+                via SSH.
+                """
+
+                # TODO: run commands directly when environment is passed
+                # properly.
+                return "echo '{0}' | ".format(inside_command) + \
+                    command + \
+                    ' -T' + \
+                    ' -o NoHostAuthenticationForLocalhost=yes' + \
+                    ' -o PasswordAuthentication=no'
+
             self.assertTrue(available)
-            self.assertEqual(0, subprocess.call(
-                command +
-                ' -o NoHostAuthenticationForLocalhost=yes' +
-                ' /bin/true',
-                shell=True
-            ))
+            self.assertEqual(
+                subprocess.call(in_container('/bin/true'), shell=True),
+                0
+            )
+
+            ssh_env = parse_environment(
+                subprocess.check_output(in_container('/usr/bin/env -0'),
+                                        shell=True),
+            )
+
+            self.assertEqual(ssh_env['DEVNAME'], 'myself')
+            self.assertEqual(ssh_env['ENVIRONMENT'], 'dev_local')
+            self.assertEqual(ssh_env['SITE_PROTOCOL'], 'http')
+            self.assertEqual(ssh_env['SITE_DOMAIN'], 'localhost:9999')
+
         finally:
             # Kill and remove the started container
             if container is not None:
