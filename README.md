@@ -14,6 +14,12 @@ original command, so that one can run arbitary commands inside.
 Installation
 ------------
 
+Install the package from pip:
+
+    sudo pip install docker-forklift
+
+(Note: you may need to use ```sudo pip-3.2 install docker-forklift```)
+
 Or in a virtualenv:
 
     pip install docker-forklift
