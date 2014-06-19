@@ -14,16 +14,6 @@ original command, so that one can run arbitary commands inside.
 Installation
 ------------
 
-Install python 3 & python3-pip:
-
-    sudo apt-get install python3 python3-pip
-
-Install the package from pip:
-
-    sudo pip install docker-forklift
-
-(Note: you may need to use ```sudo pip-3.2 install docker-forklift```)
-
 Or in a virtualenv:
 
     pip install docker-forklift
