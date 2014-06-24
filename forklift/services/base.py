@@ -21,6 +21,7 @@ from collections import namedtuple
 import os
 import socket
 import sys
+import time
 
 import docker
 
@@ -280,6 +281,7 @@ def ensure_container(image,
                 connect_socket = socket.create_connection(
                     ('127.0.0.1', host_port), 1
                 )
+                connect_socket.close()
                 break
             except socket.error:
                 pass
