@@ -33,7 +33,7 @@ from forklift.base import (
     DEVNULL,
     free_port,
     ImproperlyConfigured,
-    wait_for
+    wait_for,
 )
 from forklift.registry import Registry
 
