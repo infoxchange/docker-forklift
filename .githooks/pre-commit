@@ -114,6 +114,7 @@ class Main(object):
             #
             rating = pylint_rating(result)
             if rating is not None and rating < _PYLINT_PASS_THRESHOLD:
+                print(result)
                 ok = False
                 print(
                     "%s failed PyLint check (scored %s, min allowed is %s)"

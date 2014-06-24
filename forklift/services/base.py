@@ -233,10 +233,10 @@ def ensure_container(image,
     try:
         try:
             container_status = docker_client.inspect_container(container_name)
-        except docker.APIError:
+        except docker.errors.APIError:
             try:
                 docker_client.inspect_image(image)
-            except docker.APIError:
+            except docker.errors.APIError:
                 raise DockerImageRequired(image)
 
             if data_dir is not None:
