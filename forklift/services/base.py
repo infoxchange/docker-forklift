@@ -277,14 +277,9 @@ def ensure_container(image,
 
         host_port = docker_client.port(container_name, port)[0]['HostPort']
         for _ in range(1, 60):
-            try:
-                connect_socket = socket.create_connection(
-                    ('127.0.0.1', host_port), 1
-                )
-                connect_socket.close()
+            if port_open('127.0.0.1', host_port):
                 break
-            except socket.error:
-                pass
+
             time.sleep(1)
         else:
             raise ContainerRefusingConnection(image, port)
