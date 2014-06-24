@@ -101,14 +101,14 @@ class PostgreSQL(Service):
         )
 
     @classmethod
-    def container(cls, application_id):
+    def container(cls, application_id, image='paintedfox/postgresql'):
         """
         PostgreSQL provided by a container.
         """
 
         user = re.sub('[^a-z]', '_', application_id)
         container = ensure_container(
-            image='paintedfox/postgresql',
+            image=image,
             port=cls.DEFAULT_PORT,
             application_id=application_id,
             data_dir='/data',
@@ -141,3 +141,10 @@ class PostGIS(PostgreSQL):
     CHECK_COMMAND = 'select PostGIS_full_version()'
 
     providers = ('localhost', 'container')
+
+    @classmethod
+    def container(cls, application_id, image='thatpanda/postgis'):
+        """
+        PostGIS provided by a container.
+        """
+        return super().container(application_id, image)
