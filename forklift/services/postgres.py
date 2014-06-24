@@ -21,9 +21,11 @@ import os
 import re
 import subprocess
 
-from time import sleep
-
-from .base import ensure_container, ProviderNotAvailable, Service, register
+from .base import (ensure_container,
+                   ProviderNotAvailable,
+                   Service,
+                   register,
+                   wait_for)
 
 
 @register('postgres')
@@ -94,12 +96,7 @@ class PostgreSQL(Service):
         Wait for the Postgres container to be available (or timeout) before
         returning
         """
-        timeout = int(timeout)
-        for _ in range(1, timeout):
-            if self.available():
-                break
-            sleep(1)
-        else:
+        if not wait_for(self.available, timeout=timeout):
             raise ProviderNotAvailable(
                 "Provider '{}'' unavailable after {} seconds".format(
                     self.__class__.__name__, timeout

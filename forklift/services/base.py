@@ -21,7 +21,6 @@ from collections import namedtuple
 import os
 import socket
 import sys
-import time
 
 import docker
 
@@ -29,7 +28,7 @@ import requests.exceptions
 
 from xdg.BaseDirectory import save_cache_path
 
-from forklift.base import ImproperlyConfigured
+from forklift.base import ImproperlyConfigured, wait_for
 from forklift.registry import Registry
 
 register = Registry()  # pylint:disable=invalid-name
@@ -289,12 +288,7 @@ def _wait_for_port(image, port, timeout=60):
         image - the image that the container is run from
         port - the port to wait for
     """
-    for _ in range(1, timeout):
-        if port_open('127.0.0.1', port):
-            break
-
-        time.sleep(1)
-    else:
+    if not wait_for(lambda: port_open('127.0.0.1', port), timeout=timeout):
         raise ContainerRefusingConnection(image, port)
 
 
