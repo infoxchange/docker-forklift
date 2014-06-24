@@ -152,7 +152,8 @@ class PostGIS(PostgreSQL):
     PostgreSQL database with PostGIS support.
     """
 
-    CHECK_COMMAND = 'CREATE EXTENSION postgis; SELECT PostGIS_full_version()'
+    CHECK_COMMAND = """CREATE EXTENSION IF NOT EXISTS postgis;
+                       SELECT PostGIS_full_version()"""
     CONTAINER_IMAGE = 'thatpanda/postgis'
     URL_SCHEME = 'postgis'
 
