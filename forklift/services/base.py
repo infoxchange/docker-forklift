@@ -188,6 +188,19 @@ class DockerImageRequired(DependencyRequired):
         )
 
 
+class ContainerRefusingConnection(ProviderNotAvailable):
+    """
+    A Docker container that was started is not connectable after a period of
+    time.
+    """
+
+    def __init__(self, image, port):
+        super().__init__(
+            message=("Docker container {0} was started but couldn't connect on"
+                     "port {1}").format(image, port)
+        )
+
+
 ContainerInfo = namedtuple('ContainerInfo', ['port', 'data_dir'])
 
 
@@ -261,7 +274,19 @@ def ensure_container(image,
                 }
             docker_client.start(container_name, **start_args)
 
-        port = docker_client.port(container_name, port)[0]['HostPort']
-        return ContainerInfo(port=port, data_dir=cached_dir)
+        host_port = docker_client.port(container_name, port)[0]['HostPort']
+        for _ in range(1, 60):
+            try:
+                connect_socket = socket.create_connection(
+                    ('127.0.0.1', host_port), 1
+                )
+                break
+            except socket.error:
+                pass
+            time.sleep(1)
+        else:
+            raise ContainerRefusingConnection(image, port)
+
+        return ContainerInfo(port=host_port, data_dir=cached_dir)
     except requests.exceptions.ConnectionError:
         raise ProviderNotAvailable("Cannot connect to Docker daemon.")
