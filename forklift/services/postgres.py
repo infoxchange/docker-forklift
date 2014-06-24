@@ -87,6 +87,19 @@ class PostgreSQL(Service):
         except subprocess.CalledProcessError:
             return False
 
+    def wait_until_available(self, timeout=60):
+        timeout = int(timeout)
+        for _ in range(0, timeout):
+            if self.available():
+                break
+            sleep(1)
+        else:
+            raise ProviderNotAvailable(
+                "Provider '{}'' unavailable after {} seconds".format(
+                    self.__class__.__name__, timeout
+                )
+            )
+
     @classmethod
     def localhost(cls, application_id):
         """
@@ -116,6 +129,8 @@ class PostgreSQL(Service):
                 'PASS': user,
             }
         )
+
+        self.wait_until_available()
 
         return cls(
             host='localhost',
