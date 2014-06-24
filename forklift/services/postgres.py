@@ -95,7 +95,7 @@ class PostgreSQL(Service):
         returning
         """
         timeout = int(timeout)
-        for _ in range(0, timeout):
+        for _ in range(1, timeout):
             if self.available():
                 break
             sleep(1)
