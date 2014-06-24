@@ -273,17 +273,29 @@ def ensure_container(image,
                              cached_dir)
 
         host_port = docker_client.port(container_name, port)[0]['HostPort']
-        for _ in range(1, 60):
-            if port_open('127.0.0.1', host_port):
-                break
-
-            time.sleep(1)
-        else:
-            raise ContainerRefusingConnection(image, port)
+        _wait_for_port(image, host_port)
 
         return ContainerInfo(port=host_port, data_dir=cached_dir)
     except requests.exceptions.ConnectionError:
         raise ProviderNotAvailable("Cannot connect to Docker daemon.")
+
+
+def _wait_for_port(image, port, timeout=60):
+    """
+    Wait for a port to become available, or raise ContainerRefusingConnection
+    error
+
+    Parameters:
+        image - the image that the container is run from
+        port - the port to wait for
+    """
+    for _ in range(1, timeout):
+        if port_open('127.0.0.1', port):
+            break
+
+        time.sleep(1)
+    else:
+        raise ContainerRefusingConnection(image, port)
 
 
 def _start_container(docker_client, image, port, data_dir, cached_dir):
