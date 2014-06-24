@@ -30,13 +30,11 @@ class PostgreSQL(Service):
     PostgreSQL service provided by the host machine.
     """
 
-    DATABASE_NAME = 'DEFAULT'
-
-    URL_SCHEME = 'postgres'
-
     CHECK_COMMAND = 'select version()'
-
+    CONTAINER_IMAGE = 'paintedfox/postgseql'
+    DATABASE_NAME = 'DEFAULT'
     DEFAULT_PORT = 5432
+    URL_SCHEME = 'postgres'
 
     allow_override = ('name', 'host', 'port', 'user', 'password')
 
@@ -101,14 +99,14 @@ class PostgreSQL(Service):
         )
 
     @classmethod
-    def container(cls, application_id, image='paintedfox/postgresql'):
+    def container(cls, application_id):
         """
         PostgreSQL provided by a container.
         """
 
         user = re.sub('[^a-z]', '_', application_id)
         container = ensure_container(
-            image=image,
+            image=cls.CONTAINER_IMAGE,
             port=cls.DEFAULT_PORT,
             application_id=application_id,
             data_dir='/data',
@@ -136,15 +134,8 @@ class PostGIS(PostgreSQL):
     PostgreSQL database with PostGIS support.
     """
 
+    CHECK_COMMAND = 'select PostGIS_full_version()'
+    CONTAINER_IMAGE = 'thatpanda/postgis'
     URL_SCHEME = 'postgis'
 
-    CHECK_COMMAND = 'select PostGIS_full_version()'
-
     providers = ('localhost', 'container')
-
-    @classmethod
-    def container(cls, application_id, image='thatpanda/postgis'):
-        """
-        PostGIS provided by a container.
-        """
-        return super().container(application_id, image)
