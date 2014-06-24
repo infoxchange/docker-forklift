@@ -32,7 +32,7 @@ def free_port():
         return sock.getsockname()[1]
 
 
-def wait_for(func, allowed_exceptions=None, timeout=60):
+def wait_for(func, allowed_exceptions=(), timeout=60):
     """
     Wait for a function to return a truthy value, possibly ignoring some
     exceptions if they are to occur
@@ -46,7 +46,6 @@ def wait_for(func, allowed_exceptions=None, timeout=60):
         True if the function returned a truthy value within the timout, False
         if the timout occurred before a truthy value was returned
     """
-    allowed_exceptions = allowed_exceptions or ()
 
     timeout = int(timeout)
     start_time = time.time()
