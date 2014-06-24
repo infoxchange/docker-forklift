@@ -266,14 +266,11 @@ def ensure_container(image,
             container_status = docker_client.inspect_container(container_name)
 
         if not container_status['State']['Running']:
-            start_args = {
-                'port_bindings': {port: None},
-            }
-            if data_dir is not None:
-                start_args['binds'] = {
-                    cached_dir: data_dir,
-                }
-            docker_client.start(container_name, **start_args)
+            _start_container(docker_client,
+                             container_name,
+                             port,
+                             data_dir,
+                             cached_dir)
 
         host_port = docker_client.port(container_name, port)[0]['HostPort']
         for _ in range(1, 60):
@@ -287,3 +284,24 @@ def ensure_container(image,
         return ContainerInfo(port=host_port, data_dir=cached_dir)
     except requests.exceptions.ConnectionError:
         raise ProviderNotAvailable("Cannot connect to Docker daemon.")
+
+
+def _start_container(docker_client, image, port, data_dir, cached_dir):
+    """
+    Start a container, binding ports and data dirs
+
+    Parameters:
+        docker_client - client for the Docker API
+        image - the image to run a container from
+        port - the port to forward from the container
+        data_dir - the directory to persistently mount inside the container
+        cached_dir - the directory to mount from the host to data_dir
+    """
+    start_args = {
+        'port_bindings': {port: None},
+    }
+    if data_dir is not None:
+        start_args['binds'] = {
+            cached_dir: data_dir,
+        }
+    docker_client.start(image, **start_args)
