@@ -43,8 +43,7 @@ class PostgreSQL(Service):
 
     _CHECK_AVAILABLE_EXCEPTIONS = (subprocess.CalledProcessError,
                                    ProviderNotAvailable,
-                                   PermissionError,
-                                   )
+                                   PermissionError)
 
     allow_override = ('name', 'host', 'port', 'user', 'password')
 
@@ -133,8 +132,8 @@ class PostgreSQL(Service):
                     "Provider '{}' unavailable after trying {} times".format(
                         self.__class__.__name__, retries))
             return True
-        except self._CHECK_AVAILABLE_EXCEPTIONS as e:
-            print("Error checking for Postgres: {}".format(e))
+        except self._CHECK_AVAILABLE_EXCEPTIONS as ex:
+            print("Error checking for Postgres: {}".format(ex))
             return False
 
     @classmethod

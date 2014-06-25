@@ -406,6 +406,7 @@ class Docker(Driver):
         if identity:
             ssh_command += ('-i', identity)
 
+        available = False
         try:
             available = wait_for(
                 lambda: subprocess.check_call(
@@ -421,9 +422,8 @@ class Docker(Driver):
                 ) or True,
                 expected_exceptions=(subprocess.CalledProcessError,)
             )
-        except (subprocess.CalledProcessError, PermissionError) as e:
-            print(e)
-            return False
+        except (subprocess.CalledProcessError, PermissionError) as ex:
+            print(ex)
 
         return (' '.join(ssh_command), available)
 
