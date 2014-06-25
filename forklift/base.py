@@ -48,7 +48,7 @@ def wait_for(func, expected_exceptions=(), retries=60):
     """
 
     retries = int(retries)
-    for retry in range(1, retries):
+    for retry in range(1, retries + 1):
         try:
             return_value = func()
             if return_value:

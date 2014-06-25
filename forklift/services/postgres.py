@@ -88,31 +88,55 @@ class PostgreSQL(Service):
         unavailable
         """
 
+        stderr = ""
         subprocess_kwargs = {
             'stdin': DEVNULL,
             'stdout': DEVNULL,
-            'stderr': DEVNULL,
+            'stderr': subprocess.PIPE,
         }
 
-        subprocess.check_call(['psql', '--version'], **subprocess_kwargs)
+        def get_proc_stderr(proc):
+            """
+            Safely read data from stderr into a string and return it
+            """
+            proc_stderr = ""
+            for stderr_data in proc.communicate():
+                proc_stderr += str(stderr_data)
+            proc.wait()
+            return proc_stderr
+
+        psql_check_command = ['psql', '--version']
+        proc = subprocess.Popen(psql_check_command, **subprocess_kwargs)
+        stderr = get_proc_stderr(proc)
+
+        if proc.returncode != 0:
+            raise subprocess.CalledProcessError(
+                returncode=proc.returncode,
+                cmd=' '.join(psql_check_command),
+                output=stderr
+            )
 
         if self.password:
             os.environ['PGPASSWORD'] = self.password
 
-        try:
-            subprocess.check_call([
-                'psql',
-                '-h', self.host,
-                '-p', str(self.port),
-                '-U', self.user,
-                '-w',
-                self.name,
-                '-c', self.CHECK_COMMAND,
-            ], **subprocess_kwargs)
-        except subprocess.CalledProcessError as ex:
-            ProviderNotAvailable(
-                "Provider '{}' is not yet available: {}".format(
-                    self.__class__.__name__, ex))
+        proc = subprocess.Popen([
+            'psql',
+            '-h', self.host,
+            '-p', str(self.port),
+            '-U', self.user,
+            '-w',
+            self.name,
+            '-c', self.CHECK_COMMAND,
+        ], **subprocess_kwargs)
+        stderr += get_proc_stderr(proc)
+
+        if proc.returncode != 0:
+            raise ProviderNotAvailable(
+                ("Provider '{}' is not yet available: psql exited with status "
+                 "{}\n{}").format(self.__class__.__name__,
+                                  proc.returncode,
+                                  stderr)
+            )
 
         return True
 
@@ -130,7 +154,7 @@ class PostgreSQL(Service):
                 expected_exceptions=(ProviderNotAvailable,),
                 retries=retries,
             )
-            return True
+            return available
 
         except self._CHECK_AVAILABLE_EXCEPTIONS as ex:
             print("Error checking for {}: {}".format(
