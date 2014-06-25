@@ -422,7 +422,7 @@ class Docker(Driver):
                 ) or True,
                 expected_exceptions=(subprocess.CalledProcessError,)
             )
-        except (subprocess.CalledProcessError, PermissionError) as ex:
+        except (subprocess.CalledProcessError, OSError) as ex:
             print(ex)
 
         return (' '.join(ssh_command), available)

@@ -43,7 +43,7 @@ class PostgreSQL(Service):
 
     _CHECK_AVAILABLE_EXCEPTIONS = (subprocess.CalledProcessError,
                                    ProviderNotAvailable,
-                                   PermissionError)
+                                   OSError)
 
     allow_override = ('name', 'host', 'port', 'user', 'password')
 
