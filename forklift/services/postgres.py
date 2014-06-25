@@ -94,22 +94,25 @@ class PostgreSQL(Service):
             'stderr': DEVNULL,
         }
 
-        try:
-            subprocess.check_call(['psql', '--version'], **subprocess_kwargs)
-        except subprocess.CalledProcessError:
-            raise ProviderNotAvailable("Can not execute psql")
+        subprocess.check_call(['psql', '--version'], **subprocess_kwargs)
 
         if self.password:
             os.environ['PGPASSWORD'] = self.password
-        subprocess.check_call([
-            'psql',
-            '-h', self.host,
-            '-p', str(self.port),
-            '-U', self.user,
-            '-w',
-            self.name,
-            '-c', self.CHECK_COMMAND,
-        ], **subprocess_kwargs)
+
+        try:
+            subprocess.check_call([
+                'psql',
+                '-h', self.host,
+                '-p', str(self.port),
+                '-U', self.user,
+                '-w',
+                self.name,
+                '-c', self.CHECK_COMMAND,
+            ], **subprocess_kwargs)
+        except subprocess.CalledProcessError as ex:
+            ProviderNotAvailable(
+                "Provider '{}' is not yet available: {}".format(
+                    self.__class__.__name__, ex))
 
         return True
 
@@ -124,16 +127,15 @@ class PostgreSQL(Service):
         try:
             available = wait_for(
                 self.check_available,
-                expected_exceptions=(subprocess.CalledProcessError,),
+                expected_exceptions=(ProviderNotAvailable,),
                 retries=retries,
             )
-            if not available:
-                raise ProviderNotAvailable(
-                    "Provider '{}' unavailable after trying {} times".format(
-                        self.__class__.__name__, retries))
             return True
+
         except self._CHECK_AVAILABLE_EXCEPTIONS as ex:
-            print("Error checking for Postgres: {}".format(ex))
+            print("Error checking for {}: {}".format(
+                self.__class__.__name__, ex
+            ))
             return False
 
     @classmethod
