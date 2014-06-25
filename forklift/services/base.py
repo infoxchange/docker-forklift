@@ -279,7 +279,7 @@ def ensure_container(image,
         raise ProviderNotAvailable("Cannot connect to Docker daemon.")
 
 
-def _wait_for_port(image, port, timeout=30):
+def _wait_for_port(image, port, retries=30):
     """
     Wait for a port to become available, or raise ContainerRefusingConnection
     error
@@ -287,8 +287,9 @@ def _wait_for_port(image, port, timeout=30):
     Parameters:
         image - the image that the container is run from
         port - the port to wait for
+        retries - number of times to retry before giving up
     """
-    if not wait_for(lambda: port_open('127.0.0.1', port), timeout=timeout):
+    if not wait_for(lambda: port_open('127.0.0.1', port), retries=retries):
         raise ContainerRefusingConnection(image, port)
 
 

@@ -32,33 +32,38 @@ def free_port():
         return sock.getsockname()[1]
 
 
-def wait_for(func, allowed_exceptions=(), timeout=60):
+def wait_for(func, expected_exceptions=(), retries=60):
     """
     Wait for a function to return a truthy value, possibly ignoring some
-    exceptions if they are to occur
+    exceptions if they are raised until the very last retry
 
     Parameters:
         func - the function to continually call until truthy
-        allowed_exceptions - list of exceptions to ignore
-        timeout - the minimum time to try for (NOTE: this is not a maximum)
+        expected_exceptions - list of exceptions to ignore, unless the final
+            retry is reached (then any exceptions are reraised)
+        retries - number of times to retry before giving up
 
     Return value:
-        True if the function returned a truthy value within the timout, False
-        if the timout occurred before a truthy value was returned
+        The return value of func the last time it was run
     """
 
-    timeout = int(timeout)
+    retries = int(retries)
     start_time = time.time()
-    while time.time() - start_time < timeout:
+    for retry in range(1, retries):
         try:
-            if func():
-                return True
-        except allowed_exceptions:
-            pass
+            return_value = func()
+            if return_value:
+                break
+
+        except expected_exceptions:
+            if retry == retries:
+                raise
+            else:
+                pass
 
         time.sleep(1)
 
-    return False
+    return return_value
 
 
 class ImproperlyConfigured(Exception):

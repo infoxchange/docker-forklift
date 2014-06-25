@@ -406,20 +406,24 @@ class Docker(Driver):
         if identity:
             ssh_command += ('-i', identity)
 
-        available = wait_for(
-            lambda: subprocess.check_call(
-                ssh_command + [
-                    '-o', 'StrictHostKeyChecking=no',
-                    '-o', 'PasswordAuthentication=no',
-                    '-o', 'NoHostAuthenticationForLocalhost=yes',
-                    '/bin/true',
-                ],
-                stdin=DEVNULL,
-                stdout=DEVNULL,
-                stderr=DEVNULL,
-            ) or True,
-            allowed_exceptions=(subprocess.CalledProcessError,)
-        )
+        try:
+            available = wait_for(
+                lambda: subprocess.check_call(
+                    ssh_command + [
+                        '-o', 'StrictHostKeyChecking=no',
+                        '-o', 'PasswordAuthentication=no',
+                        '-o', 'NoHostAuthenticationForLocalhost=yes',
+                        '/bin/true',
+                    ],
+                    stdin=DEVNULL,
+                    stdout=DEVNULL,
+                    stderr=DEVNULL,
+                ) or True,
+                expected_exceptions=(subprocess.CalledProcessError,)
+            )
+        except (subprocess.CalledProcessError, PermissionError) as e:
+            print(e)
+            return False
 
         return (' '.join(ssh_command), available)
 

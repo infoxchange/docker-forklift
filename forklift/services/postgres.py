@@ -21,6 +21,7 @@ import os
 import re
 import subprocess
 
+from forklift.base import DEVNULL
 from .base import (ensure_container,
                    ProviderNotAvailable,
                    Service,
@@ -39,6 +40,11 @@ class PostgreSQL(Service):
     DATABASE_NAME = 'DEFAULT'
     DEFAULT_PORT = 5432
     URL_SCHEME = 'postgres'
+
+    _CHECK_AVAILABLE_EXCEPTIONS = (subprocess.CalledProcessError,
+                                   ProviderNotAvailable,
+                                   PermissionError,
+                                   )
 
     allow_override = ('name', 'host', 'port', 'user', 'password')
 
@@ -69,39 +75,67 @@ class PostgreSQL(Service):
 
     def available(self):
         """
-        Check whether PostgreSQL is installed on the host and accessible.
+        Wrap check_available so that "expected" exceptions are not raised
         """
-
         try:
-            subprocess.check_output(['psql', '--version'])
-
-            if self.password:
-                os.environ['PGPASSWORD'] = self.password
-            subprocess.check_output([
-                'psql',
-                '-h', self.host,
-                '-p', str(self.port),
-                '-U', self.user,
-                '-w',
-                self.name,
-                '-c', self.CHECK_COMMAND,
-            ])
-
-            return True
-        except subprocess.CalledProcessError:
+            return self.check_available()
+        except self._CHECK_AVAILABLE_EXCEPTIONS:
             return False
 
-    def wait_until_available(self, timeout=60):
+    def check_available(self):
         """
-        Wait for the Postgres container to be available (or timeout) before
-        returning
+        Check whether PostgreSQL is installed on the host and accessible. Will
+        raise ProviderNotAvailable or subprocess.CalledProcessError when
+        unavailable
         """
-        if not wait_for(self.available, timeout=timeout):
-            raise ProviderNotAvailable(
-                "Provider '{}'' unavailable after {} seconds".format(
-                    self.__class__.__name__, timeout
-                )
+
+        subprocess_kwargs = {
+            'stdin': DEVNULL,
+            'stdout': DEVNULL,
+            'stderr': DEVNULL,
+        }
+
+        try:
+            subprocess.check_call(['psql', '--version'], **subprocess_kwargs)
+        except subprocess.CalledProcessError:
+            raise ProviderNotAvailable("Can not execute psql")
+
+        if self.password:
+            os.environ['PGPASSWORD'] = self.password
+        subprocess.check_call([
+            'psql',
+            '-h', self.host,
+            '-p', str(self.port),
+            '-U', self.user,
+            '-w',
+            self.name,
+            '-c', self.CHECK_COMMAND,
+        ], **subprocess_kwargs)
+
+        return True
+
+    def wait_until_available(self, retries=60):
+        """
+        Wait for the Postgres container to be available before returning. If
+        the retry limit is exceeded, ProviderNotAvailable is raised
+
+        Parameters:
+            retries - number of times to retry before giving up
+        """
+        try:
+            available = wait_for(
+                self.check_available,
+                expected_exceptions=(subprocess.CalledProcessError,),
+                retries=retries,
             )
+            if not available:
+                raise ProviderNotAvailable(
+                    "Provider '{}' unavailable after trying {} times".format(
+                        self.__class__.__name__, retries))
+            return True
+        except self._CHECK_AVAILABLE_EXCEPTIONS as e:
+            print("Error checking for Postgres: {}".format(e))
+            return False
 
     @classmethod
     def localhost(cls, application_id):
