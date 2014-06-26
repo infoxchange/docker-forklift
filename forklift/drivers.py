@@ -26,7 +26,6 @@ import socket
 import struct
 import subprocess
 import sys
-import time
 
 import docker
 
@@ -34,6 +33,7 @@ from forklift.base import (
     DEVNULL,
     free_port,
     ImproperlyConfigured,
+    wait_for,
 )
 from forklift.registry import Registry
 
@@ -406,9 +406,10 @@ class Docker(Driver):
         if identity:
             ssh_command += ('-i', identity)
 
-        for _ in range(1, 60):
-            try:
-                subprocess.check_call(
+        available = False
+        try:
+            available = wait_for(
+                lambda: subprocess.check_call(
                     ssh_command + [
                         '-o', 'StrictHostKeyChecking=no',
                         '-o', 'PasswordAuthentication=no',
@@ -418,14 +419,11 @@ class Docker(Driver):
                     stdin=DEVNULL,
                     stdout=DEVNULL,
                     stderr=DEVNULL,
-                )
-                available = True
-                break
-            except subprocess.CalledProcessError:
-                pass
-            time.sleep(1)
-        else:
-            available = False
+                ) or True,
+                expected_exceptions=(subprocess.CalledProcessError,)
+            )
+        except (subprocess.CalledProcessError, OSError) as ex:
+            print(ex)
 
         return (' '.join(ssh_command), available)
 

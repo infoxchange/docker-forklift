@@ -28,7 +28,7 @@ import requests.exceptions
 
 from xdg.BaseDirectory import save_cache_path
 
-from forklift.base import ImproperlyConfigured
+from forklift.base import ImproperlyConfigured, wait_for
 from forklift.registry import Registry
 
 register = Registry()  # pylint:disable=invalid-name
@@ -188,6 +188,19 @@ class DockerImageRequired(DependencyRequired):
         )
 
 
+class ContainerRefusingConnection(ProviderNotAvailable):
+    """
+    A Docker container that was started is not connectable after a period of
+    time.
+    """
+
+    def __init__(self, image, port):
+        super().__init__(
+            message=("Docker container {0} was started but couldn't connect on"
+                     "port {1}").format(image, port)
+        )
+
+
 ContainerInfo = namedtuple('ContainerInfo', ['port', 'data_dir'])
 
 
@@ -252,16 +265,50 @@ def ensure_container(image,
             container_status = docker_client.inspect_container(container_name)
 
         if not container_status['State']['Running']:
-            start_args = {
-                'port_bindings': {port: None},
-            }
-            if data_dir is not None:
-                start_args['binds'] = {
-                    cached_dir: data_dir,
-                }
-            docker_client.start(container_name, **start_args)
+            _start_container(docker_client,
+                             container_name,
+                             port,
+                             data_dir,
+                             cached_dir)
 
-        port = docker_client.port(container_name, port)[0]['HostPort']
-        return ContainerInfo(port=port, data_dir=cached_dir)
+        host_port = docker_client.port(container_name, port)[0]['HostPort']
+        _wait_for_port(image, host_port)
+
+        return ContainerInfo(port=host_port, data_dir=cached_dir)
     except requests.exceptions.ConnectionError:
         raise ProviderNotAvailable("Cannot connect to Docker daemon.")
+
+
+def _wait_for_port(image, port, retries=30):
+    """
+    Wait for a port to become available, or raise ContainerRefusingConnection
+    error
+
+    Parameters:
+        image - the image that the container is run from
+        port - the port to wait for
+        retries - number of times to retry before giving up
+    """
+    if not wait_for(lambda: port_open('127.0.0.1', port), retries=retries):
+        raise ContainerRefusingConnection(image, port)
+
+
+def _start_container(docker_client, image, port, data_dir, cached_dir):
+    """
+    Start a container, binding ports and data dirs
+
+    Parameters:
+        docker_client - client for the Docker API
+        image - the image to run a container from
+        port - the port to forward from the container
+        data_dir - the directory to persistently mount inside the container
+        cached_dir - the directory to mount from the host to data_dir
+    """
+    start_args = {
+        'port_bindings': {port: None},
+    }
+    if data_dir is not None:
+        start_args['binds'] = {
+            cached_dir: data_dir,
+        }
+    docker_client.start(image, **start_args)

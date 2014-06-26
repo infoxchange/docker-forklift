@@ -21,7 +21,12 @@ import os
 import re
 import subprocess
 
-from .base import ensure_container, Service, register
+from forklift.base import DEVNULL
+from .base import (ensure_container,
+                   ProviderNotAvailable,
+                   Service,
+                   register,
+                   wait_for)
 
 
 @register('postgres')
@@ -35,6 +40,10 @@ class PostgreSQL(Service):
     DATABASE_NAME = 'DEFAULT'
     DEFAULT_PORT = 5432
     URL_SCHEME = 'postgres'
+
+    _CHECK_AVAILABLE_EXCEPTIONS = (subprocess.CalledProcessError,
+                                   ProviderNotAvailable,
+                                   OSError)
 
     allow_override = ('name', 'host', 'port', 'user', 'password')
 
@@ -65,26 +74,92 @@ class PostgreSQL(Service):
 
     def available(self):
         """
-        Check whether PostgreSQL is installed on the host and accessible.
+        Wrap check_available so that "expected" exceptions are not raised
+        """
+        try:
+            return self.check_available()
+        except self._CHECK_AVAILABLE_EXCEPTIONS:
+            return False
+
+    def check_available(self):
+        """
+        Check whether PostgreSQL is installed on the host and accessible. Will
+        raise ProviderNotAvailable or subprocess.CalledProcessError when
+        unavailable
         """
 
+        stderr = ""
+        subprocess_kwargs = {
+            'stdin': DEVNULL,
+            'stdout': DEVNULL,
+            'stderr': subprocess.PIPE,
+        }
+
+        def get_proc_stderr(proc):
+            """
+            Safely read data from stderr into a string and return it
+            """
+            proc_stderr = ""
+            for stderr_data in proc.communicate():
+                proc_stderr += str(stderr_data)
+            proc.wait()
+            return proc_stderr
+
+        psql_check_command = ['psql', '--version']
+        proc = subprocess.Popen(psql_check_command, **subprocess_kwargs)
+        stderr = get_proc_stderr(proc)
+
+        if proc.returncode != 0:
+            raise subprocess.CalledProcessError(
+                returncode=proc.returncode,
+                cmd=' '.join(psql_check_command),
+                output=stderr
+            )
+
+        if self.password:
+            os.environ['PGPASSWORD'] = self.password
+
+        proc = subprocess.Popen([
+            'psql',
+            '-h', self.host,
+            '-p', str(self.port),
+            '-U', self.user,
+            '-w',
+            self.name,
+            '-c', self.CHECK_COMMAND,
+        ], **subprocess_kwargs)
+        stderr += get_proc_stderr(proc)
+
+        if proc.returncode != 0:
+            raise ProviderNotAvailable(
+                ("Provider '{}' is not yet available: psql exited with status "
+                 "{}\n{}").format(self.__class__.__name__,
+                                  proc.returncode,
+                                  stderr)
+            )
+
+        return True
+
+    def wait_until_available(self, retries=60):
+        """
+        Wait for the Postgres container to be available before returning. If
+        the retry limit is exceeded, ProviderNotAvailable is raised
+
+        Parameters:
+            retries - number of times to retry before giving up
+        """
         try:
-            subprocess.check_output(['psql', '--version'])
+            available = wait_for(
+                self.check_available,
+                expected_exceptions=(ProviderNotAvailable,),
+                retries=retries,
+            )
+            return available
 
-            if self.password:
-                os.environ['PGPASSWORD'] = self.password
-            subprocess.check_output([
-                'psql',
-                '-h', self.host,
-                '-p', str(self.port),
-                '-U', self.user,
-                '-w',
-                self.name,
-                '-c', self.CHECK_COMMAND,
-            ])
-
-            return True
-        except subprocess.CalledProcessError:
+        except self._CHECK_AVAILABLE_EXCEPTIONS as ex:
+            print("Error checking for {}: {}".format(
+                self.__class__.__name__, ex
+            ))
             return False
 
     @classmethod
@@ -117,13 +192,15 @@ class PostgreSQL(Service):
             }
         )
 
-        return cls(
+        instance = cls(
             host='localhost',
             name=user,
             user=user,
             password=user,
             port=container.port,
         )
+        instance.wait_until_available()
+        return instance
 
     providers = ('localhost', 'container')
 
@@ -134,7 +211,8 @@ class PostGIS(PostgreSQL):
     PostgreSQL database with PostGIS support.
     """
 
-    CHECK_COMMAND = 'select PostGIS_full_version()'
+    CHECK_COMMAND = """CREATE EXTENSION IF NOT EXISTS postgis;
+                       SELECT PostGIS_full_version()"""
     CONTAINER_IMAGE = 'thatpanda/postgis'
     URL_SCHEME = 'postgis'
 

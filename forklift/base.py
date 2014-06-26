@@ -19,6 +19,7 @@ Common declarations.
 
 import os
 import socket
+import time
 
 
 def free_port():
@@ -29,6 +30,39 @@ def free_port():
     with socket.socket() as sock:
         sock.bind(('', 0))
         return sock.getsockname()[1]
+
+
+def wait_for(func, expected_exceptions=(), retries=60):
+    """
+    Wait for a function to return a truthy value, possibly ignoring some
+    exceptions if they are raised until the very last retry
+
+    Parameters:
+        func - the function to continually call until truthy
+        expected_exceptions - list of exceptions to ignore, unless the final
+            retry is reached (then any exceptions are reraised)
+        retries - number of times to retry before giving up
+
+    Return value:
+        The return value of func the last time it was run
+    """
+
+    retries = int(retries)
+    for retry in range(1, retries + 1):
+        try:
+            return_value = func()
+            if return_value:
+                break
+
+        except expected_exceptions:
+            if retry == retries:
+                raise
+            else:
+                pass
+
+        time.sleep(1)
+
+    return return_value
 
 
 class ImproperlyConfigured(Exception):
