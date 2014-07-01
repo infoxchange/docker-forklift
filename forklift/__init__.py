@@ -42,6 +42,12 @@ import forklift.services
 
 LOG_LEVELS = ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')
 
+try:
+    # pylint:disable=maybe-no-member
+    __version__ = pkg_resources.get_distribution('docker-forklift').version
+except pkg_resources.DistributionNotFound:
+    __version__ = 'dev'
+
 
 def create_parser(services, drivers, command_required=True):
     """
@@ -65,10 +71,7 @@ def create_parser(services, drivers, command_required=True):
     add_argument('--loglevel', default='WARNING', choices=LOG_LEVELS,
                  metavar='LEVEL', type=lambda strlevel: strlevel.upper(),
                  help="Set the minimum log level to ouput")
-    add_argument('--version', '-v', action='version', version=(
-        # pylint:disable=maybe-no-member
-        pkg_resources.get_distribution('docker-forklift').version
-    ))
+    add_argument('--version', '-v', action='version', version=__version__)
 
     for name, service in services.items():
         service_options = parser.add_argument_group(name)
