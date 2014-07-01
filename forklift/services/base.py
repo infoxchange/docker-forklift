@@ -18,6 +18,7 @@ Services that can be provided to running applications - base definitions.
 """
 
 from collections import namedtuple
+import logging
 import os
 import socket
 import sys
@@ -31,6 +32,7 @@ from xdg.BaseDirectory import save_cache_path
 from forklift.base import ImproperlyConfigured, wait_for
 from forklift.registry import Registry
 
+LOGGER = logging.getLogger(__name__)
 register = Registry()  # pylint:disable=invalid-name
 
 
@@ -113,6 +115,8 @@ class Service(object):
         allowed_overrides = cls.allow_override + cls.allow_override_list
 
         for provider in cls.providers:
+            LOGGER.debug("Trying %s provider for %s service",
+                         provider, cls.__name__)
             try:
                 service = getattr(cls, provider)(application_id)
             except ProviderNotAvailable as exc:
@@ -129,6 +133,8 @@ class Service(object):
                 if value is not None:
                     if key in allowed_overrides:
                         setattr(service, key, value)
+                        LOGGER.debug("Config for %s: %s = %s",
+                                     cls.__name__, key, value)
                     else:
                         raise ImproperlyConfigured(
                             "Invalid parameter {0} for service {1}.".format(
@@ -237,6 +243,8 @@ def ensure_container(image,
 
     # TODO: better container name
     container_name = image.replace('/', '_') + '__' + application_id
+    LOGGER.info("Ensuring container for '%s' is started with name '%s'",
+                image, container_name)
 
     if data_dir is not None:
         cached_dir = cache_directory(container_name)
@@ -289,6 +297,7 @@ def _wait_for_port(image, port, retries=30):
         port - the port to wait for
         retries - number of times to retry before giving up
     """
+    LOGGER.debug("Waiting for '%s' port %s to be reachable", image, port)
     if not wait_for(lambda: port_open('127.0.0.1', port), retries=retries):
         raise ContainerRefusingConnection(image, port)
 
@@ -304,6 +313,10 @@ def _start_container(docker_client, image, port, data_dir, cached_dir):
         data_dir - the directory to persistently mount inside the container
         cached_dir - the directory to mount from the host to data_dir
     """
+    LOGGER.info("Starting '%s' container", image)
+    LOGGER.debug("Container port: %s", port)
+    LOGGER.debug("Container data dir (in container): %s", data_dir)
+    LOGGER.debug("Container cached dir (on host): %s", cached_dir)
     start_args = {
         'port_bindings': {port: None},
     }

@@ -19,7 +19,9 @@ user to log on to it.
 """
 
 import argparse
+import logging
 import os
+import pkg_resources
 import pwd
 import socket
 import subprocess
@@ -37,6 +39,14 @@ from forklift.arguments import argument_factory, convert_to_args, project_args
 from forklift.base import DEVNULL, ImproperlyConfigured
 import forklift.drivers
 import forklift.services
+
+LOG_LEVELS = ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')
+
+try:
+    # pylint:disable=maybe-no-member
+    __version__ = pkg_resources.get_distribution('docker-forklift').version
+except pkg_resources.DistributionNotFound:
+    __version__ = 'dev'
 
 
 def create_parser(services, drivers, command_required=True):
@@ -58,6 +68,10 @@ def create_parser(services, drivers, command_required=True):
     add_argument('--environment', default=[], nargs='*',
                  type=lambda pair: pair.split('=', 1),
                  help="Additional environment variables to pass")
+    add_argument('--loglevel', default='WARNING', choices=LOG_LEVELS,
+                 metavar='LEVEL', type=lambda strlevel: strlevel.upper(),
+                 help="Set the minimum log level to ouput")
+    add_argument('--version', '-v', action='version', version=__version__)
 
     for name, service in services.items():
         service_options = parser.add_argument_group(name)
@@ -233,6 +247,8 @@ class Forklift(object):
             self.help()
             return 0
 
+        self.setup_logging()
+
         driver_name = self.get_driver(self.conf)
         driver_class = self.drivers[driver_name]
 
@@ -261,6 +277,12 @@ class Forklift(object):
             return 1
 
         return driver.run(*command)
+
+    def setup_logging(self):
+        """
+        Setup the root logger
+        """
+        logging.basicConfig(level=self.conf.loglevel)
 
 
 def main():

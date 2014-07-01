@@ -17,6 +17,7 @@
 PostgreSQL database service.
 """
 
+import logging
 import os
 import re
 import subprocess
@@ -27,6 +28,9 @@ from .base import (ensure_container,
                    Service,
                    register,
                    wait_for)
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 @register('postgres')
@@ -59,6 +63,13 @@ class PostgreSQL(Service):
         self.name = name
         self.user = user
         self.password = password
+
+        if LOGGER.isEnabledFor(logging.DEBUG):
+            for attr in ('name', 'host', 'port', 'name', 'user', 'password'):
+                LOGGER.debug("%s %s: %s",
+                             self.__class__.__name__,
+                             attr,
+                             getattr(self, attr))
 
     def environment(self):
         """
@@ -149,6 +160,8 @@ class PostgreSQL(Service):
             retries - number of times to retry before giving up
         """
         try:
+            LOGGER.info("Waiting for %s to become available",
+                        self.__class__.__name__)
             available = wait_for(
                 self.check_available,
                 expected_exceptions=(ProviderNotAvailable,),
