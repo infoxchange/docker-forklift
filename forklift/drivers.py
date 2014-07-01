@@ -27,6 +27,10 @@ import struct
 import subprocess
 import sys
 
+# pylint:disable=no-name-in-module,import-error
+from distutils.spawn import find_executable
+# pylint:enable=no-name-in-module,import-error
+
 import docker
 
 from forklift.base import (
@@ -553,4 +557,4 @@ class Direct(Driver):
         Check if the target is directly executable.
         """
 
-        return os.path.exists(target)
+        return find_executable(target)
