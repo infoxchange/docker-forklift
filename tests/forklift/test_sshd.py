@@ -18,6 +18,7 @@ Test SSH daemon setup.
 """
 
 import os
+import re
 import subprocess
 
 from tests.base import (
@@ -124,7 +125,8 @@ class SSHTestCase(TestCase):
             self.assertEqual(ssh_env['DEVNAME'], 'myself')
             self.assertEqual(ssh_env['ENVIRONMENT'], 'dev_local')
             self.assertEqual(ssh_env['SITE_PROTOCOL'], 'http')
-            self.assertEqual(ssh_env['SITE_DOMAIN'], 'localhost:9999')
+            self.assertTrue(
+                re.match(r'^localhost:\d+$', ssh_env['SITE_DOMAIN']))
 
         finally:
             # Kill and remove the started container

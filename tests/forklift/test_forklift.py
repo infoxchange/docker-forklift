@@ -18,6 +18,7 @@ Tests for Forklift.
 """
 
 import contextlib
+import re
 import sys
 import tempfile
 import yaml
@@ -34,7 +35,7 @@ from tests.base import (
 )
 
 
-class SmokeTestCase(TestCase):
+class UsageTestCase(TestCase):
     """
     Test running forklift with no arguments.
     """
@@ -56,12 +57,24 @@ class SmokeTestCase(TestCase):
                 self.assertIn("usage: ", usage_test)
 
 
+class SmokeTestCase(TestCase):
+    """
+    Test running basic commands.
+    """
+
+    def test_commands(self):
+        """
+        Test running basic commands.
+        """
+
+        self.assertEqual(0, self.run_forklift('true'))
+        self.assertNotEqual(0, self.run_forklift('false'))
+
+
 class CommandsMixin(object):
     """
     Mixin with tests to ensure commands are run correctly.
     """
-
-    default_driver = 'save_output_direct'
 
     def run_command(self, *command):
         """
@@ -100,7 +113,7 @@ class DirectCommandsTestCase(CommandsMixin, TestCase):
     Test running commands directly.
     """
 
-    pass
+    default_driver = 'direct'
 
 
 @docker
@@ -109,7 +122,7 @@ class DockerCommandsTestCase(CommandsMixin, TestCase):
     Test running commands via Docker.
     """
 
-    default_driver = 'save_output_docker'
+    default_driver = 'docker'
 
     def run_command(self, *command):
         """
@@ -181,7 +194,7 @@ class CaptureEnvironmentMixin(object):
         self.assertEqual(env['DEVNAME'], 'myself')
         self.assertEqual(env['ENVIRONMENT'], 'dev_local')
         self.assertEqual(env['SITE_PROTOCOL'], 'http')
-        self.assertEqual(env['SITE_DOMAIN'], 'localhost:9999')
+        self.assertTrue(re.match(r'^localhost:\d+$', env['SITE_DOMAIN']))
 
         env = self.capture_env('--serve_port', '9998')
         self.assertEqual(env['SITE_DOMAIN'], 'localhost:9998')
@@ -271,7 +284,7 @@ class DirectEnvironmentTestCase(CaptureEnvironmentMixin, TestCase):
     Test that environment is passed to the commands using direct driver.
     """
 
-    default_driver = 'save_output_direct'
+    default_driver = 'direct'
 
 
 @docker
@@ -280,7 +293,7 @@ class DockerEnvironmentTestCase(CaptureEnvironmentMixin, TestCase):
     Test environment passed to the commands using Docker.
     """
 
-    default_driver = 'save_output_docker'
+    default_driver = 'docker'
 
     @staticmethod
     def localhost_reference():
