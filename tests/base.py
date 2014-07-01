@@ -104,14 +104,6 @@ class TestDriver(forklift.drivers.Driver):
         env['DEVNAME'] = 'myself'
         return env
 
-    @staticmethod
-    def _free_port():
-        return 9999
-
-    @staticmethod
-    def valid_target(target):
-        return False
-
 
 class SaveOutputMixin(forklift.drivers.Driver):
     """
@@ -169,10 +161,10 @@ class TestForklift(forklift.Forklift):
     Forklift with a test service.
     """
 
-    drivers = merge_dicts({
-        'save_output_direct': SaveOutputDirect,
-        'save_output_docker': SaveOutputDocker,
-    }, forklift.Forklift.drivers)
+    drivers = {
+        'direct': SaveOutputDirect,
+        'docker': SaveOutputDocker,
+    }
 
     def get_driver(self, conf):
         """
@@ -230,7 +222,10 @@ class TestCase(unittest.TestCase):
         """
 
         instance = self.forklift_class(['forklift'] + list(args))
-        with instance.set_driver(self.default_driver):
+        if self.default_driver:
+            with instance.set_driver(self.default_driver):
+                return instance.main()
+        else:
             return instance.main()
 
 
