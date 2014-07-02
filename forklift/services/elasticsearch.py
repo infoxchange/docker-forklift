@@ -28,6 +28,7 @@ from forklift.base import open_root_owned
 from .base import (cache_directory,
                    container_name_for,
                    ensure_container,
+                   log_service_settings,
                    Service,
                    pipe_split,
                    register)
@@ -48,6 +49,11 @@ class Elasticsearch(Service):
         self.index_name = index_name
         self._url_array = []
         self.urls = urls
+
+        log_service_settings(
+            LOGGER, self,
+            'index_name', lambda: ('urls', self.url_string())
+        )
 
     def environment(self):
         """
