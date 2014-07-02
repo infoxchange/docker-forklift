@@ -218,6 +218,20 @@ def cache_directory(container_name):
     return os.path.join(save_cache_path('forklift'), container_name)
 
 
+def container_name_for(image, application_id):
+    """
+    Get a name for a service container based on image and application ID
+
+    Parameters:
+        image - image that the container is for
+        application_id - application id that the container is for
+
+    Return value:
+        A string
+    """
+    return image.replace('/', '_') + '__' + application_id
+
+
 def ensure_container(image,
                      port,
                      application_id,
@@ -242,7 +256,7 @@ def ensure_container(image,
     docker_client = docker.Client()
 
     # TODO: better container name
-    container_name = image.replace('/', '_') + '__' + application_id
+    container_name = container_name_for(image, application_id)
     LOGGER.info("Ensuring container for '%s' is started with name '%s'",
                 image, container_name)
 
