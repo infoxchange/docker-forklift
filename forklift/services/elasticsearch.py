@@ -52,7 +52,7 @@ class Elasticsearch(Service):
 
         log_service_settings(
             LOGGER, self,
-            'index_name', lambda: ('urls', self.url_string())
+            'index_name', 'url_string'
         )
 
     def environment(self):

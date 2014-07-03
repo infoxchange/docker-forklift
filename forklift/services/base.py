@@ -341,23 +341,21 @@ def _start_container(docker_client, image, port, data_dir, cached_dir):
     docker_client.start(image, **start_args)
 
 
-def log_service_settings(logger, service, *args):
+def log_service_settings(logger, service, *attrs):
     """
     Format and log a service settings.
 
     Parameters:
         logger - a logger object to log to
         service - the service object that the settings are for
-        args - a list of settings that can be expressed in multiple ways:
-                - Callable: The value is called, if needed, with no args and
-                  expects a setting name and value to be returned
-                - Non-Callable: The value is an attribute on the service
+        attrs - a list of attrs to get from the service. If the attr is
+                callable, it will be called with no arguments. It may return
+                just a value, or a tuple of a new attr name and a value
     """
     if logger.isEnabledFor(logging.DEBUG):
-        for attr in args:
-            if callable(attr):
-                attr, val = attr()
-            else:
-                val = getattr(service, attr)
+        for attr in attrs:
+            val = getattr(service, attr)
+            if callable(val):
+                val = val()
 
             logger.debug("%s %s: %s", service.__class__.__name__, attr, val)
