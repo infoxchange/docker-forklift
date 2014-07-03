@@ -24,6 +24,7 @@ import subprocess
 
 from forklift.base import DEVNULL
 from .base import (ensure_container,
+                   log_service_settings,
                    ProviderNotAvailable,
                    Service,
                    register,
@@ -64,12 +65,10 @@ class PostgreSQL(Service):
         self.user = user
         self.password = password
 
-        if LOGGER.isEnabledFor(logging.DEBUG):
-            for attr in ('name', 'host', 'port', 'name', 'user', 'password'):
-                LOGGER.debug("%s %s: %s",
-                             self.__class__.__name__,
-                             attr,
-                             getattr(self, attr))
+        log_service_settings(
+            LOGGER, self,
+            'name', 'host', 'port', 'name', 'user', 'password'
+        )
 
     def environment(self):
         """

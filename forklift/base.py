@@ -19,7 +19,11 @@ Common declarations.
 
 import os
 import socket
+import subprocess
+import tempfile
 import time
+
+from contextlib import contextmanager
 
 
 def free_port():
@@ -65,6 +69,19 @@ def wait_for(func, expected_exceptions=(), retries=60):
     return return_value
 
 
+@contextmanager
+def open_root_owned(source, *args, **kwargs):
+    """
+    Copy a file as root, open it for writing, then copy it back as root again
+    when done
+    """
+    with tempfile.NamedTemporaryFile(*args, **kwargs) as dest_fh:
+        if os.path.isfile(source):
+            subprocess.check_call(['sudo', 'cp', source, dest_fh.name])
+        yield dest_fh
+        subprocess.check_call(['sudo', 'cp', dest_fh.name, source])
+
+
 class ImproperlyConfigured(Exception):
     """
     The host is not properly configured for running Docker.
@@ -73,7 +90,6 @@ class ImproperlyConfigured(Exception):
     pass
 
 try:
-    import subprocess
     DEVNULL = subprocess.DEVNULL  # pylint:disable=no-member
 except AttributeError:
     DEVNULL = open(os.devnull)

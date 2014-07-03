@@ -276,3 +276,72 @@ class BaseTestCase(unittest.TestCase):
             self.assertTrue(base.port_open('localhost', port))
         finally:
             server.shutdown()
+
+
+class MockLogger(object):
+    """
+    A mock for Python logger
+    """
+
+    def __init__(self):
+        self.logs = {}
+
+    # pylint:disable=missing-docstring, invalid-name, unused-argument
+    def isEnabledFor(self, *args):
+        return True
+
+    def debug(self, fstring, *args):
+        self.logs.setdefault('debug', []).append(fstring % args)
+
+    def info(self, fstring, *args):
+        self.logs.setdefault('info', []).append(fstring % args)
+
+    def warning(self, fstring, *args):
+        self.logs.setdefault('warning', []).append(fstring % args)
+
+    def error(self, fstring, *args):
+        self.logs.setdefault('error', []).append(fstring % args)
+
+    def critical(self, fstring, *args):
+        self.logs.setdefault('critical', []).append(fstring % args)
+
+
+class SettingsLogTestCase(unittest.TestCase):
+    """
+    Test the log_service_settings function
+    """
+    def setUp(self):
+        self.logger = MockLogger()
+
+    def test_basic(self):
+        """
+        Check that basic logging of properties works
+        """
+        setattr(self, 'containers', 'pretty great')
+        setattr(self, 'score', 9001)
+
+        base.log_service_settings(self.logger, self,
+                                  'containers', 'score')
+        self.assertEqual(self.logger.logs, {
+            'debug': [
+                'SettingsLogTestCase containers: pretty great',
+                'SettingsLogTestCase score: 9001',
+            ],
+        })
+
+    def test_callable(self):
+        """
+        Check that if attrs are callable, they are correctly called to get
+        the value
+        """
+        setattr(self, 'the_callable', lambda: 'the value')
+        setattr(self, 'not_callable', 9001)
+
+        base.log_service_settings(self.logger, self,
+                                  'the_callable', 'not_callable')
+        self.assertEqual(self.logger.logs, {
+            'debug': [
+                'SettingsLogTestCase the_callable: the value',
+                'SettingsLogTestCase not_callable: 9001',
+            ],
+        })

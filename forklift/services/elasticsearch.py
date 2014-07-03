@@ -18,10 +18,22 @@ Elasticsearch service.
 """
 
 import json
+import logging
+import os
 import urllib.request
+
 from os.path import join
 
-from .base import ensure_container, Service, pipe_split, register
+from forklift.base import open_root_owned
+from .base import (cache_directory,
+                   container_name_for,
+                   ensure_container,
+                   log_service_settings,
+                   Service,
+                   pipe_split,
+                   register)
+
+LOGGER = logging.getLogger(__name__)
 
 
 @register('elasticsearch')
@@ -37,6 +49,11 @@ class Elasticsearch(Service):
         self.index_name = index_name
         self._url_array = []
         self.urls = urls
+
+        log_service_settings(
+            LOGGER, self,
+            'index_name', 'url_string'
+        )
 
     def environment(self):
         """
@@ -127,15 +144,17 @@ class Elasticsearch(Service):
         Elasticsearch provided by a container.
         """
 
-        container = ensure_container(
-            image='dockerfile/elasticsearch',
-            port=9200,
-            application_id=application_id,
-            data_dir='/data',
-        )
+        image_name = 'dockerfile/elasticsearch'
+        container_name = container_name_for(image_name, application_id)
+        cache_dir = cache_directory(container_name)
 
-        config_path = join(container.data_dir, 'elasticsearch.yml')
-        with open(config_path, 'w') as config:
+        if not os.path.exists(cache_dir):
+            LOGGER.debug("Creating cache directory '%s'", cache_dir)
+            os.makedirs(cache_dir)
+
+        config_path = join(cache_dir, 'elasticsearch.yml')
+        LOGGER.debug("Writing ElasticSearch config to '%s'", config_path)
+        with open_root_owned(config_path, 'w') as config:
             print(
                 """
                 path:
@@ -144,6 +163,13 @@ class Elasticsearch(Service):
                 """,
                 file=config,
             )
+
+        container = ensure_container(
+            image=image_name,
+            port=9200,
+            application_id=application_id,
+            data_dir='/data',
+        )
 
         return cls(
             index_name=application_id,
