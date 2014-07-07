@@ -65,6 +65,9 @@ def create_parser(services, drivers, command_required=True):
                  help="Driver to execute the application with")
     add_argument('--services', default=[], nargs='*', choices=services.keys(),
                  help="Services to provide to the application")
+    add_argument('--transient', action='store_true',
+                 help="Force services to use their container provider, where "
+                 "one is available")
     add_argument('--environment', default=[], nargs='*',
                  type=lambda pair: pair.split('=', 1),
                  help="Additional environment variables to pass")
@@ -254,11 +257,16 @@ class Forklift(object):
 
         (target, *command) = self.conf.command
 
+        provide_kwargs = {}
+        if self.conf.transient:
+            provide_kwargs.update({'limit_providers': ('container',)})
+
         try:
             services = [
                 self.services[service].provide(
                     self.conf.application_id,
-                    project_args(self.conf, service)
+                    project_args(self.conf, service),
+                    **provide_kwargs
                 )
                 for service in self.conf.services
             ]
