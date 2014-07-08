@@ -299,6 +299,7 @@ def ensure_container(image,
             data_dir - if asked for, path for the persistently mounted
             directory inside the container
             name - the container name
+            new - True/False to show if the container was created or not
     """
 
     docker_client = docker.Client()
