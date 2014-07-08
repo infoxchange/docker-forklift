@@ -21,7 +21,6 @@ from collections import namedtuple
 import logging
 import os
 import socket
-import shutil
 import sys
 
 import docker
@@ -126,8 +125,8 @@ class Service(object):
             limit_providers = cls.providers
 
         LOGGER.debug("Checking %s to provide service %s",
-                ", ".join(limit_providers),
-                cls.__name__)
+                     ", ".join(limit_providers),
+                     cls.__name__)
 
         for provider in limit_providers:
             LOGGER.debug("Trying %s provider for %s service",
@@ -192,18 +191,18 @@ class Service(object):
             LOGGER.debug("Don't know how to clean up %s service provided "
                          "by %s",
                          self.__class__.__name__,
-                         self.provided_by)
+                         self.provided_by)  # pylint:disable=no-member
             return False
 
-        if self.container.new:
+        if self.container.new:  # pylint:disable=no-member
             LOGGER.debug("Cleaning up container '%s' for %s service",
-                         self.container.name,
+                         self.container.name,  # pylint:disable=no-member
                          self.__class__.__name__)
-            destroy_container(self.container.name)
+            destroy_container(self.container.name)  # pylint:disable=no-member
         else:
             LOGGER.debug("Not cleaning up container '%s' for service %s "
                          "because it was not created by this invocation",
-                         self.container.name,
+                         self.container.name,  # pylint:disable=no-member
                          self.__class__.__name__)
 
         return True
@@ -255,8 +254,7 @@ class ContainerRefusingConnection(ProviderNotAvailable):
 ContainerInfo = namedtuple('ContainerInfo', ['port',
                                              'data_dir',
                                              'name',
-                                             'new',
-                                             ])
+                                             'new'])
 
 
 def cache_directory(container_name):

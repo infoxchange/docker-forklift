@@ -326,6 +326,7 @@ class Forklift(object):
         finally:
             if self.conf.rm:
                 for service in services:
+                    # pylint:disable=undefined-loop-variable
                     service.cleanup()
 
     def setup_logging(self):
