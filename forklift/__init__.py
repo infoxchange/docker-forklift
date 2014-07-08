@@ -220,7 +220,6 @@ class Forklift(object):
         )
         LOGGER.info("New application ID is '%s'", self.conf.application_id)
 
-
     @staticmethod
     def _readme_stream():
         """
