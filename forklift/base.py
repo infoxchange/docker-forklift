@@ -82,6 +82,13 @@ def open_root_owned(source, *args, **kwargs):
         subprocess.check_call(['sudo', 'cp', dest_fh.name, source])
 
 
+def rm_tree_root_owned(path):
+    """
+    Do an equivalent of shutil.rmtree, but as root
+    """
+    subprocess.check_call(['sudo', 'rm', '-r', path])
+
+
 class ImproperlyConfigured(Exception):
     """
     The host is not properly configured for running Docker.

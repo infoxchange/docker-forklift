@@ -21,6 +21,7 @@ from collections import namedtuple
 import logging
 import os
 import socket
+import shutil
 import sys
 
 import docker
@@ -29,7 +30,7 @@ import requests.exceptions
 
 from xdg.BaseDirectory import save_cache_path
 
-from forklift.base import ImproperlyConfigured, wait_for
+from forklift.base import ImproperlyConfigured, wait_for, rm_tree_root_owned
 from forklift.registry import Registry
 
 LOGGER = logging.getLogger(__name__)
@@ -133,6 +134,7 @@ class Service(object):
                          provider, cls.__name__)
             try:
                 service = getattr(cls, provider)(application_id)
+                setattr(service, 'provided_by', provider)
             except ProviderNotAvailable as exc:
                 print((
                     "While trying '{provider}' provider for {service}: {exc}"
@@ -154,8 +156,12 @@ class Service(object):
                             "Invalid parameter {0} for service {1}.".format(
                                 key, cls.__name__))
 
-            if service.available():
-                return service
+            try:
+                if service.available():
+                    return service
+            except:
+                service.cleanup()
+                raise
 
         raise ImproperlyConfigured(
             "No available providers for service {0}.".format(cls.__name__))
@@ -176,6 +182,31 @@ class Service(object):
         """
 
         raise NotImplementedError("Please override environment().")
+
+    def cleanup(self):
+        """
+        Do any clean up required to undo anything that was done in the provide
+        method
+        """
+        if not hasattr(self, 'container'):
+            LOGGER.debug("Don't know how to clean up %s service provided "
+                         "by %s",
+                         self.__class__.__name__,
+                         self.provided_by)
+            return False
+
+        if self.container.new:
+            LOGGER.debug("Cleaning up container '%s' for %s service",
+                         self.container.name,
+                         self.__class__.__name__)
+            destroy_container(self.container.name)
+        else:
+            LOGGER.debug("Not cleaning up container '%s' for service %s "
+                         "because it was not created by this invocation",
+                         self.container.name,
+                         self.__class__.__name__)
+
+        return True
 
 
 class ProviderNotAvailable(Exception):
@@ -221,7 +252,11 @@ class ContainerRefusingConnection(ProviderNotAvailable):
         )
 
 
-ContainerInfo = namedtuple('ContainerInfo', ['port', 'data_dir'])
+ContainerInfo = namedtuple('ContainerInfo', ['port',
+                                             'data_dir',
+                                             'name',
+                                             'new',
+                                             ])
 
 
 def cache_directory(container_name):
@@ -265,6 +300,7 @@ def ensure_container(image,
             port - the forwarded port number
             data_dir - if asked for, path for the persistently mounted
             directory inside the container
+            name - the container name
     """
 
     docker_client = docker.Client()
@@ -280,9 +316,11 @@ def ensure_container(image,
         cached_dir = None
 
     try:
+        new_container = False
         try:
             container_status = docker_client.inspect_container(container_name)
         except docker.errors.APIError:
+            new_container = True
             try:
                 docker_client.inspect_image(image)
             except docker.errors.APIError:
@@ -308,11 +346,33 @@ def ensure_container(image,
                              cached_dir)
 
         host_port = docker_client.port(container_name, port)[0]['HostPort']
-        _wait_for_port(image, host_port)
 
-        return ContainerInfo(port=host_port, data_dir=cached_dir)
+        try:
+            _wait_for_port(image, host_port)
+        except:
+            if new_container:
+                LOGGER.debug("Could not connect to '%s' container, so "
+                             "destroying it", image)
+                destroy_container(container_name)
+            raise
+
+        return ContainerInfo(port=host_port,
+                             data_dir=cached_dir,
+                             name=container_name,
+                             new=new_container)
     except requests.exceptions.ConnectionError:
         raise ProviderNotAvailable("Cannot connect to Docker daemon.")
+
+
+def destroy_container(container_name):
+    """
+    Stop and remove a container by name
+    """
+    cache_dir = cache_directory(container_name)
+    docker_client = docker.Client()
+    docker_client.stop(container_name)
+    docker_client.remove_container(container_name)
+    rm_tree_root_owned(cache_dir)
 
 
 def _wait_for_port(image, port, retries=30):

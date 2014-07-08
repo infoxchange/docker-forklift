@@ -114,7 +114,9 @@ class Memcache(Service):
             application_id=application_id,
         )
 
-        return cls(
+        instance = cls(
             key_prefix=application_id,
             hosts=['localhost:{0}'.format(container.port)],
         )
+        setattr(instance, 'container', container)
+        return instance

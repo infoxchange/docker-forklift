@@ -171,9 +171,11 @@ class Elasticsearch(Service):
             data_dir='/data',
         )
 
-        return cls(
+        instance = cls(
             index_name=application_id,
             urls=('http://localhost:{0}'.format(container.port),),
         )
+        setattr(instance, 'container', container)
+        return instance
 
     providers = ('localhost', 'container')

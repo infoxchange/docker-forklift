@@ -68,6 +68,9 @@ def create_parser(services, drivers, command_required=True):
     add_argument('--transient', action='store_true',
                  help="Force services to use their container provider, where "
                  "one is available")
+    add_argument('--rm', action='store_true',
+                 help="When done, stop and remove any containers that were "
+                 "created")
     add_argument('--environment', default=[], nargs='*',
                  type=lambda pair: pair.split('=', 1),
                  help="Additional environment variables to pass")
@@ -261,30 +264,38 @@ class Forklift(object):
         if self.conf.transient:
             provide_kwargs.update({'limit_providers': ('container',)})
 
+        services = []
         try:
-            services = [
-                self.services[service].provide(
-                    self.conf.application_id,
-                    project_args(self.conf, service),
-                    **provide_kwargs
+            try:
+                services_gen = (
+                    self.services[service].provide(
+                        self.conf.application_id,
+                        project_args(self.conf, service),
+                        **provide_kwargs
+                    )
+                    for service in self.conf.services
                 )
-                for service in self.conf.services
-            ]
+                for service in services_gen:
+                    services.append(service)
 
-            environment = dict(self.conf.environment)
+                environment = dict(self.conf.environment)
 
-            driver = driver_class(
-                target=target,
-                services=services,
-                environment=environment,
-                conf=self.conf,
-            )
+                driver = driver_class(
+                    target=target,
+                    services=services,
+                    environment=environment,
+                    conf=self.conf,
+                )
 
-        except ImproperlyConfigured as ex:
-            print(ex)
-            return 1
+            except ImproperlyConfigured as ex:
+                print(ex)
+                return 1
 
-        return driver.run(*command)
+            return driver.run(*command)
+        finally:
+            if self.conf.rm:
+                for service in services:
+                    service.cleanup()
 
     def setup_logging(self):
         """
