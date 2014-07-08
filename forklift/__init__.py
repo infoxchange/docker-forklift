@@ -78,6 +78,8 @@ def create_parser(services, drivers, command_required=True):
     add_argument('--unique', action='store_true',
                  help="Add to the application ID to make it unique for this"
                  "invocation")
+    add_argument('--cleanroom', action='store_true',
+                 help="Synonym for --unique --transient --rm")
     add_argument('--environment', default=[], nargs='*',
                  type=lambda pair: pair.split('=', 1),
                  help="Additional environment variables to pass")
@@ -146,6 +148,11 @@ class Forklift(object):
         parser = create_parser(self.services, self.drivers)
 
         conf = parser.parse_args(options)
+
+        if conf.cleanroom:
+            args_idx = options.index('--zzzz')
+            left, right = (options[:args_idx], options[args_idx:])
+            options = left + ['--unique', '--transient', '--rm'] + right
 
         # Once the driver and services are known, parse the arguments again
         # with only the needed options
