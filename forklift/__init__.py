@@ -173,6 +173,9 @@ class Forklift(object):
 
         self.conf = parser.parse_args(options)
 
+        if self.conf.unique:
+            self.unique_application_id()
+
     def implicit_configuration(self):
         """
         Implicit configuration based on the current directory.
@@ -291,9 +294,6 @@ class Forklift(object):
         provide_kwargs = {}
         if self.conf.transient:
             provide_kwargs.update({'limit_providers': ('container',)})
-
-        if self.conf.unique:
-            self.unique_application_id()
 
         services = []
         try:
