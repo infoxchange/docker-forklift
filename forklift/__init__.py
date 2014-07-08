@@ -20,10 +20,13 @@ user to log on to it.
 
 import argparse
 import logging
+import math
 import os
 import pkg_resources
 import pwd
+import random
 import socket
+import string
 import subprocess
 import sys
 import time
@@ -41,6 +44,7 @@ import forklift.drivers
 import forklift.services
 
 LOG_LEVELS = ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')
+LOGGER = logging.getLogger(__name__)
 
 try:
     # pylint:disable=maybe-no-member
@@ -71,6 +75,9 @@ def create_parser(services, drivers, command_required=True):
     add_argument('--rm', action='store_true',
                  help="When done, stop and remove any containers that were "
                  "created")
+    add_argument('--unique', action='store_true',
+                 help="Add to the application ID to make it unique for this"
+                 "invocation")
     add_argument('--environment', default=[], nargs='*',
                  type=lambda pair: pair.split('=', 1),
                  help="Additional environment variables to pass")
@@ -191,6 +198,20 @@ class Forklift(object):
         except IOError:
             return []
 
+    def unique_application_id(self):
+        """
+        Set the application id in config to a (probably) unique value
+        """
+        self.conf.application_id += (
+            '_%s' % hex(int(time.time() * 1000))[-10:] +
+            ''.join(
+                random.choice(string.ascii_lowercase + string.digits)
+                for _ in range(5)
+            )
+        )
+        LOGGER.info("New application ID is '%s'", self.conf.application_id)
+
+
     @staticmethod
     def _readme_stream():
         """
@@ -263,6 +284,9 @@ class Forklift(object):
         provide_kwargs = {}
         if self.conf.transient:
             provide_kwargs.update({'limit_providers': ('container',)})
+
+        if self.conf.unique:
+            self.unique_application_id()
 
         services = []
         try:
