@@ -20,7 +20,6 @@ user to log on to it.
 
 import argparse
 import logging
-import math
 import os
 import pkg_resources
 import pwd
