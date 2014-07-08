@@ -179,22 +179,23 @@ class Service(object):
         Do any clean up required to undo anything that was done in the provide
         method
         """
+        # pylint:disable=no-member
         if not hasattr(self, 'container'):
             LOGGER.debug("Don't know how to clean up %s service provided "
                          "by %s",
                          self.__class__.__name__,
-                         self.provided_by)  # pylint:disable=no-member
+                         self.provided_by)
             return False
 
-        if self.container.new:  # pylint:disable=no-member
+        if self.container_info.new:
             LOGGER.debug("Cleaning up container '%s' for %s service",
-                         self.container.name,  # pylint:disable=no-member
+                         self.container_info.name,
                          self.__class__.__name__)
-            destroy_container(self.container.name)  # pylint:disable=no-member
+            destroy_container(self.container_info.name)
         else:
             LOGGER.debug("Not cleaning up container '%s' for service %s "
                          "because it was not created by this invocation",
-                         self.container.name,  # pylint:disable=no-member
+                         self.container_info.name,
                          self.__class__.__name__)
 
         return True

@@ -214,7 +214,8 @@ class PostgreSQL(Service):
             port=container.port,
         )
         instance.wait_until_available()
-        instance.container = container
+        # pylint:disable=attribute-defined-outside-init
+        instance.container_info = container
         return instance
 
     providers = ('localhost', 'container')

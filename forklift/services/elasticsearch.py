@@ -177,7 +177,8 @@ class Elasticsearch(Service):
             index_name=application_id,
             urls=('http://localhost:{0}'.format(container.port),),
         )
-        instance.container = container
+        # pylint:disable=attribute-defined-outside-init
+        instance.container_info = container
         return instance
 
     providers = ('localhost', 'container')
