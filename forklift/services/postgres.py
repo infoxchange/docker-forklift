@@ -214,7 +214,7 @@ class PostgreSQL(Service):
             port=container.port,
         )
         instance.wait_until_available()
-        setattr(instance, 'container', container)
+        instance.container = container
         return instance
 
     providers = ('localhost', 'container')

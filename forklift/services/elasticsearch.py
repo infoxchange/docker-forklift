@@ -177,7 +177,7 @@ class Elasticsearch(Service):
             index_name=application_id,
             urls=('http://localhost:{0}'.format(container.port),),
         )
-        setattr(instance, 'container', container)
+        instance.container = container
         return instance
 
     providers = ('localhost', 'container')
