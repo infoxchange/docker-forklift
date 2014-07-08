@@ -70,10 +70,10 @@ def create_parser(services, drivers, command_required=True):
     add_argument('--services', default=[], nargs='*', choices=services.keys(),
                  help="Services to provide to the application")
     add_argument('--transient', action='store_true',
-                 help="Force services to use their container provider, where "
+                 help="Force services to use a transisent provider, where "
                  "one is available")
     add_argument('--rm', action='store_true',
-                 help="When done, stop and remove any containers that were "
+                 help="When done, clean up and transient providers that were "
                  "created")
     add_argument('--unique', action='store_true',
                  help="Add to the application ID to make it unique for this"
