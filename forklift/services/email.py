@@ -18,7 +18,7 @@ Proxy service.
 """
 
 from forklift.base import free_port
-from .base import Service, port_open, register
+from .base import Service, port_open, register, transient_provider
 
 
 @register('email')
@@ -60,6 +60,7 @@ class Email(Service):
 
     # pylint:disable=unused-argument
     @classmethod
+    @transient_provider
     def stdout(cls, application_id):
         """
         Mailer printing all the messages to the standard output of Forklift.

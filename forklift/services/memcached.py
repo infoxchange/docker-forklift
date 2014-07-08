@@ -23,6 +23,7 @@ from .base import (
     port_open,
     register,
     split_host_port,
+    transient_provider,
 )
 
 
@@ -103,6 +104,7 @@ class Memcache(Service):
                    hosts=['localhost:{0}'.format(cls.DEFAULT_PORT)])
 
     @classmethod
+    @transient_provider
     def container(cls, application_id):
         """
         Memcached provided by a container.

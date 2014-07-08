@@ -291,18 +291,14 @@ class Forklift(object):
 
         (target, *command) = self.conf.command
 
-        provide_kwargs = {}
-        if self.conf.transient:
-            provide_kwargs.update({'limit_providers': ('container',)})
-
         services = []
         try:
             try:
                 services_gen = (
                     self.services[service].provide(
                         self.conf.application_id,
-                        project_args(self.conf, service),
-                        **provide_kwargs
+                        overrides=project_args(self.conf, service),
+                        transient=self.conf.transient,
                     )
                     for service in self.conf.services
                 )

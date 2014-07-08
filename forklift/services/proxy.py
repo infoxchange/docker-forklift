@@ -17,7 +17,7 @@
 Proxy service.
 """
 
-from .base import Service, port_open, register
+from .base import Service, port_open, register, transient_provider
 
 
 @register('proxy')
@@ -56,6 +56,7 @@ class Proxy(Service):
 
     # pylint:disable=unused-argument
     @classmethod
+    @transient_provider
     def manual(cls, application_id):
         """
         Manually-configured proxy. Will not be available unless parameters

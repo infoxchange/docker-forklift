@@ -106,7 +106,7 @@ class Service(object):
             add_argument('--{0}'.format(param), nargs='+')
 
     @classmethod
-    def provide(cls, application_id, overrides=None, limit_providers=None):
+    def provide(cls, application_id, overrides=None, transient=False):
         """
         Choose the first available service from the list of providers.
         """
@@ -114,25 +114,17 @@ class Service(object):
         overrides = overrides or {}
         allowed_overrides = cls.allow_override + cls.allow_override_list
 
-        if limit_providers is None:
-            limit_providers = cls.providers
-        else:
-            # Only get the union of valid providers
-            limit_providers = set(limit_providers) & set(cls.providers)
+        for provider in cls.providers:
+            provider_func = getattr(cls, provider)
+            if transient and not getattr(provider_func, 'transient', False):
+                LOGGER.debug("Skipping %s provider for %s service because "
+                             "it's not transient", provider, cls.__name__)
+                continue
 
-        # Must have some providers
-        if not limit_providers:
-            limit_providers = cls.providers
-
-        LOGGER.debug("Checking %s to provide service %s",
-                     ", ".join(limit_providers),
-                     cls.__name__)
-
-        for provider in limit_providers:
             LOGGER.debug("Trying %s provider for %s service",
                          provider, cls.__name__)
             try:
-                service = getattr(cls, provider)(application_id)
+                service = provider_func(application_id)
                 setattr(service, 'provided_by', provider)
             except ProviderNotAvailable as exc:
                 print((
@@ -432,3 +424,11 @@ def log_service_settings(logger, service, *attrs):
                 val = val()
 
             logger.debug("%s %s: %s", service.__class__.__name__, attr, val)
+
+
+def transient_provider(func):
+    """
+    Decorator to mark a provider as transient
+    """
+    func.transient = True
+    return func

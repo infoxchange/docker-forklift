@@ -31,7 +31,8 @@ from .base import (cache_directory,
                    log_service_settings,
                    Service,
                    pipe_split,
-                   register)
+                   register,
+                   transient_provider)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -139,6 +140,7 @@ class Elasticsearch(Service):
                    urls=('http://localhost:9200',))
 
     @classmethod
+    @transient_provider
     def container(cls, application_id):
         """
         Elasticsearch provided by a container.
