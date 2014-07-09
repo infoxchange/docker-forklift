@@ -314,27 +314,15 @@ def ensure_container(image,
         cached_dir = None
 
     try:
-        new_container = False
-        try:
-            container_status = docker_client.inspect_container(container_name)
-        except docker.errors.APIError:
-            new_container = True
-            try:
-                docker_client.inspect_image(image)
-            except docker.errors.APIError:
-                raise DockerImageRequired(image)
-
-            if data_dir is not None:
-                # Ensure the data volume is mounted
-                kwargs.setdefault('volumes', {})[data_dir] = cached_dir
-
-            docker_client.create_container(
-                image,
-                name=container_name,
-                ports=(port,),
-                **kwargs
-            )
-            container_status = docker_client.inspect_container(container_name)
+        created, container_status = get_or_create_container(
+            docker_client,
+            container_name,
+            image,
+            port,
+            data_dir,
+            cached_dir,
+            **kwargs
+        )
 
         if not container_status['State']['Running']:
             _start_container(docker_client,
@@ -348,7 +336,7 @@ def ensure_container(image,
         try:
             _wait_for_port(image, host_port)
         except:
-            if new_container:
+            if created:
                 LOGGER.debug("Could not connect to '%s' container, so "
                              "destroying it", image)
                 destroy_container(container_name)
@@ -357,9 +345,56 @@ def ensure_container(image,
         return ContainerInfo(port=host_port,
                              data_dir=cached_dir,
                              name=container_name,
-                             new=new_container)
+                             new=created)
     except requests.exceptions.ConnectionError:
         raise ProviderNotAvailable("Cannot connect to Docker daemon.")
+
+
+# pylint:disable=too-many-arguments
+def get_or_create_container(docker_client,
+                            container_name,
+                            image,
+                            port,
+                            data_dir=None,
+                            cached_dir=None,
+                            **kwargs):
+    """
+    Get info for an existing container by name, or create a new one
+
+    Parameters:
+        docker_client - a docker.Client object for the Docker daemon
+        container_name - name to check/start
+        image - the image to run a container from
+        port - the port to forward from the container
+        data_dir - the directory to persistently mount inside the container
+        cached_dir - the directory to mount from the host to data_dir
+
+    Return value:
+        A tuple of:
+            - True if the container was created, False if it was existing
+            - Output from Docker inspect
+    """
+    try:
+        return False, docker_client.inspect_container(container_name)
+    except docker.errors.APIError:
+        try:
+            docker_client.inspect_image(image)
+        except docker.errors.APIError:
+            raise DockerImageRequired(image)
+
+        if data_dir is not None:
+            # Ensure the data volume is mounted
+            kwargs.setdefault('volumes', {})[data_dir] = cached_dir
+
+        docker_client.create_container(
+            image,
+            name=container_name,
+            ports=(port,),
+            **kwargs
+        )
+        container_status = docker_client.inspect_container(container_name)
+
+    return True, container_status
 
 
 def destroy_container(container_name):
