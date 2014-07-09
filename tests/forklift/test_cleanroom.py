@@ -54,11 +54,17 @@ class TestRm(TestCase):
     Test the --rm flag
     """
 
+    def setUp(self):
+        self.client = docker.Client()
+
+        # Make sure that we have the required testing image, or at least error
+        # in a descriptive way
+        self.client.inspect_image('thatpanda/postgis')
+
     def test_create_delete(self):
         """
         Make sure the container and data dirs are both created and destroyed
         """
-        client = docker.Client()
         test_info = {}
 
         def assertions_func(driver, *_):
@@ -72,7 +78,7 @@ class TestRm(TestCase):
             self.assertTrue(os.path.isdir(test_info['data_dir']),
                             "Data dir is created")
 
-            container_inspect = client.inspect_container(
+            container_inspect = self.client.inspect_container(
                 test_info['container_name'])
             self.assertTrue(container_inspect['State']['Running'],
                             "Container is running")
@@ -91,7 +97,7 @@ class TestRm(TestCase):
                          "Data dir does not exist")
 
         with self.assertRaises(docker.errors.APIError) as ex:
-            client.inspect_container(test_info['container_name'])
+            self.client.inspect_container(test_info['container_name'])
 
         ex = ex.exception
         self.assertEqual(ex.response.status_code, 404)

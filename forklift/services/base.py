@@ -284,7 +284,8 @@ def ensure_container(image,
                      data_dir=None,
                      **kwargs):
     """
-    Ensure a container for an application is running.
+    Ensure that a container for an application is running and wait for the port
+    to be connectable.
 
     Parameters:
         image - the image to run a container from
@@ -371,7 +372,7 @@ def get_or_create_container(docker_client,
 
     Return value:
         A tuple of:
-            - True if the container was created, False if it was existing
+            - True if the container started as a result of this call
             - Output from Docker inspect
     """
     try:

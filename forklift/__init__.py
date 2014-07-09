@@ -292,6 +292,9 @@ class Forklift(object):
         services = []
         try:
             try:
+                # This strange loop is so that even if we get an exception
+                # mid-loop, we still get the list of services that have been
+                # successfully started (otherwise we get empty array)
                 services_gen = (
                     self.services[service].provide(
                         self.conf.application_id,
