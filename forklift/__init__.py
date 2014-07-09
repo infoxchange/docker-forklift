@@ -171,6 +171,9 @@ class Forklift(object):
 
         self.conf = parser.parse_args(options)
 
+        # As soon as we have parsed conf
+        self.setup_logging()
+
         if self.conf.unique:
             self.unique_application_id()
 
@@ -274,8 +277,6 @@ class Forklift(object):
         if self.conf.command == ['help']:
             self.help()
             return 0
-
-        self.setup_logging()
 
         driver_name = self.get_driver(self.conf)
         driver_class = self.drivers[driver_name]
