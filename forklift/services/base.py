@@ -110,10 +110,6 @@ class Service(object):
         """
         Choose the first available service from the list of providers.
         """
-
-        overrides = overrides or {}
-        allowed_overrides = cls.allow_override + cls.allow_override_list
-
         for provider in cls.providers:
             provider_func = getattr(cls, provider)
             if transient and not getattr(provider_func, 'transient', False):
@@ -136,16 +132,7 @@ class Service(object):
                 ), file=sys.stderr)
                 continue
 
-            for key, value in vars(overrides).items():
-                if value is not None:
-                    if key in allowed_overrides:
-                        setattr(service, key, value)
-                        LOGGER.debug("Config for %s: %s = %s",
-                                     cls.__name__, key, value)
-                    else:
-                        raise ImproperlyConfigured(
-                            "Invalid parameter {0} for service {1}.".format(
-                                key, cls.__name__))
+            cls._set_overrides(service, overrides)
 
             try:
                 if service.available():
@@ -156,6 +143,25 @@ class Service(object):
 
         raise ImproperlyConfigured(
             "No available providers for service {0}.".format(cls.__name__))
+
+    @classmethod
+    def _set_overrides(cls, service, overrides=None):
+        """
+        Setup override values on a service
+        """
+        overrides = overrides or {}
+        allowed_overrides = cls.allow_override + cls.allow_override_list
+
+        for key, value in vars(overrides).items():
+            if value is not None:
+                if key in allowed_overrides:
+                    setattr(service, key, value)
+                    LOGGER.debug("Config for %s: %s = %s",
+                                 cls.__name__, key, value)
+                else:
+                    raise ImproperlyConfigured(
+                        "Invalid parameter {0} for service {1}.".format(
+                            key, cls.__name__))
 
     def available(self):
         """
