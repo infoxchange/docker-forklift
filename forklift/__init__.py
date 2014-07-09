@@ -27,6 +27,7 @@ import socket
 import subprocess
 import sys
 import time
+import uuid
 import yaml
 # pylint:disable=no-name-in-module,import-error
 from distutils.spawn import find_executable
@@ -41,6 +42,7 @@ import forklift.drivers
 import forklift.services
 
 LOG_LEVELS = ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')
+LOGGER = logging.getLogger(__name__)
 
 try:
     # pylint:disable=maybe-no-member
@@ -65,6 +67,17 @@ def create_parser(services, drivers, command_required=True):
                  help="Driver to execute the application with")
     add_argument('--services', default=[], nargs='*', choices=services.keys(),
                  help="Services to provide to the application")
+    add_argument('--transient', action='store_true',
+                 help="Force services to use a transisent provider, where "
+                 "one is available")
+    add_argument('--rm', action='store_true',
+                 help="When done, clean up and transient providers that were "
+                 "created")
+    add_argument('--unique', action='store_true',
+                 help="Add to the application ID to make it unique for this"
+                 "invocation")
+    add_argument('--cleanroom', action='store_true',
+                 help="Synonym for --unique --transient --rm")
     add_argument('--environment', default=[], nargs='*',
                  type=lambda pair: pair.split('=', 1),
                  help="Additional environment variables to pass")
@@ -134,6 +147,11 @@ class Forklift(object):
 
         conf = parser.parse_args(options)
 
+        if conf.cleanroom:
+            args_idx = options.index('--zzzz')
+            left, right = (options[:args_idx], options[args_idx:])
+            options = left + ['--unique', '--transient', '--rm'] + right
+
         # Once the driver and services are known, parse the arguments again
         # with only the needed options
 
@@ -152,6 +170,12 @@ class Forklift(object):
                                {driver: self.drivers[driver]})
 
         self.conf = parser.parse_args(options)
+
+        # As soon as we have parsed conf
+        self.setup_logging()
+
+        if self.conf.unique:
+            self.unique_application_id()
 
     def implicit_configuration(self):
         """
@@ -184,6 +208,13 @@ class Forklift(object):
                 return convert_to_args(yaml.load(conffile))
         except IOError:
             return []
+
+    def unique_application_id(self):
+        """
+        Set the application id in config to a (probably) unique value
+        """
+        self.conf.application_id += '-%s' % uuid.uuid4()
+        LOGGER.info("New application ID is '%s'", self.conf.application_id)
 
     @staticmethod
     def _readme_stream():
@@ -247,36 +278,47 @@ class Forklift(object):
             self.help()
             return 0
 
-        self.setup_logging()
-
         driver_name = self.get_driver(self.conf)
         driver_class = self.drivers[driver_name]
 
         (target, *command) = self.conf.command
 
+        services = []
         try:
-            services = [
-                self.services[service].provide(
-                    self.conf.application_id,
-                    project_args(self.conf, service)
+            try:
+                # This strange loop is so that even if we get an exception
+                # mid-loop, we still get the list of services that have been
+                # successfully started (otherwise we get empty array)
+                services_gen = (
+                    self.services[service].provide(
+                        self.conf.application_id,
+                        overrides=project_args(self.conf, service),
+                        transient=self.conf.transient,
+                    )
+                    for service in self.conf.services
                 )
-                for service in self.conf.services
-            ]
+                for service in services_gen:
+                    services.append(service)
 
-            environment = dict(self.conf.environment)
+                environment = dict(self.conf.environment)
 
-            driver = driver_class(
-                target=target,
-                services=services,
-                environment=environment,
-                conf=self.conf,
-            )
+                driver = driver_class(
+                    target=target,
+                    services=services,
+                    environment=environment,
+                    conf=self.conf,
+                )
 
-        except ImproperlyConfigured as ex:
-            print(ex)
-            return 1
+            except ImproperlyConfigured as ex:
+                print(ex)
+                return 1
 
-        return driver.run(*command)
+            return driver.run(*command)
+        finally:
+            if self.conf.rm:
+                for service in services:
+                    # pylint:disable=undefined-loop-variable
+                    service.cleanup()
 
     def setup_logging(self):
         """

@@ -29,7 +29,7 @@ import requests.exceptions
 
 from xdg.BaseDirectory import save_cache_path
 
-from forklift.base import ImproperlyConfigured, wait_for
+from forklift.base import ImproperlyConfigured, wait_for, rm_tree_root_owned
 from forklift.registry import Registry
 
 LOGGER = logging.getLogger(__name__)
@@ -106,19 +106,22 @@ class Service(object):
             add_argument('--{0}'.format(param), nargs='+')
 
     @classmethod
-    def provide(cls, application_id, overrides=None):
+    def provide(cls, application_id, overrides=None, transient=False):
         """
         Choose the first available service from the list of providers.
         """
-
-        overrides = overrides or {}
-        allowed_overrides = cls.allow_override + cls.allow_override_list
-
         for provider in cls.providers:
+            provider_func = getattr(cls, provider)
+            if transient and not getattr(provider_func, 'transient', False):
+                LOGGER.debug("Skipping %s provider for %s service because "
+                             "it's not transient", provider, cls.__name__)
+                continue
+
             LOGGER.debug("Trying %s provider for %s service",
                          provider, cls.__name__)
             try:
-                service = getattr(cls, provider)(application_id)
+                service = provider_func(application_id)
+                setattr(service, 'provided_by', provider)
             except ProviderNotAvailable as exc:
                 print((
                     "While trying '{provider}' provider for {service}: {exc}"
@@ -129,22 +132,36 @@ class Service(object):
                 ), file=sys.stderr)
                 continue
 
-            for key, value in vars(overrides).items():
-                if value is not None:
-                    if key in allowed_overrides:
-                        setattr(service, key, value)
-                        LOGGER.debug("Config for %s: %s = %s",
-                                     cls.__name__, key, value)
-                    else:
-                        raise ImproperlyConfigured(
-                            "Invalid parameter {0} for service {1}.".format(
-                                key, cls.__name__))
+            cls._set_overrides(service, overrides)
 
-            if service.available():
-                return service
+            try:
+                if service.available():
+                    return service
+            except:
+                service.cleanup()
+                raise
 
         raise ImproperlyConfigured(
             "No available providers for service {0}.".format(cls.__name__))
+
+    @classmethod
+    def _set_overrides(cls, service, overrides=None):
+        """
+        Setup override values on a service
+        """
+        overrides = overrides or {}
+        allowed_overrides = cls.allow_override + cls.allow_override_list
+
+        for key, value in vars(overrides).items():
+            if value is not None:
+                if key in allowed_overrides:
+                    setattr(service, key, value)
+                    LOGGER.debug("Config for %s: %s = %s",
+                                 cls.__name__, key, value)
+                else:
+                    raise ImproperlyConfigured(
+                        "Invalid parameter {0} for service {1}.".format(
+                            key, cls.__name__))
 
     def available(self):
         """
@@ -162,6 +179,32 @@ class Service(object):
         """
 
         raise NotImplementedError("Please override environment().")
+
+    def cleanup(self):
+        """
+        Do any clean up required to undo anything that was done in the provide
+        method
+        """
+        # pylint:disable=no-member
+        if not hasattr(self, 'container'):
+            LOGGER.debug("Don't know how to clean up %s service provided "
+                         "by %s",
+                         self.__class__.__name__,
+                         self.provided_by)
+            return False
+
+        if self.container_info.new:
+            LOGGER.debug("Cleaning up container '%s' for %s service",
+                         self.container_info.name,
+                         self.__class__.__name__)
+            destroy_container(self.container_info.name)
+        else:
+            LOGGER.debug("Not cleaning up container '%s' for service %s "
+                         "because it was not created by this invocation",
+                         self.container_info.name,
+                         self.__class__.__name__)
+
+        return True
 
 
 class ProviderNotAvailable(Exception):
@@ -207,7 +250,10 @@ class ContainerRefusingConnection(ProviderNotAvailable):
         )
 
 
-ContainerInfo = namedtuple('ContainerInfo', ['port', 'data_dir'])
+ContainerInfo = namedtuple('ContainerInfo', ['port',
+                                             'data_dir',
+                                             'name',
+                                             'new'])
 
 
 def cache_directory(container_name):
@@ -238,7 +284,8 @@ def ensure_container(image,
                      data_dir=None,
                      **kwargs):
     """
-    Ensure a container for an application is running.
+    Ensure that a container for an application is running and wait for the port
+    to be connectable.
 
     Parameters:
         image - the image to run a container from
@@ -251,6 +298,8 @@ def ensure_container(image,
             port - the forwarded port number
             data_dir - if asked for, path for the persistently mounted
             directory inside the container
+            name - the container name
+            new - True/False to show if the container was created or not
     """
 
     docker_client = docker.Client()
@@ -266,25 +315,15 @@ def ensure_container(image,
         cached_dir = None
 
     try:
-        try:
-            container_status = docker_client.inspect_container(container_name)
-        except docker.errors.APIError:
-            try:
-                docker_client.inspect_image(image)
-            except docker.errors.APIError:
-                raise DockerImageRequired(image)
-
-            if data_dir is not None:
-                # Ensure the data volume is mounted
-                kwargs.setdefault('volumes', {})[data_dir] = cached_dir
-
-            docker_client.create_container(
-                image,
-                name=container_name,
-                ports=(port,),
-                **kwargs
-            )
-            container_status = docker_client.inspect_container(container_name)
+        created, container_status = get_or_create_container(
+            docker_client,
+            container_name,
+            image,
+            port,
+            data_dir,
+            cached_dir,
+            **kwargs
+        )
 
         if not container_status['State']['Running']:
             _start_container(docker_client,
@@ -294,11 +333,80 @@ def ensure_container(image,
                              cached_dir)
 
         host_port = docker_client.port(container_name, port)[0]['HostPort']
-        _wait_for_port(image, host_port)
 
-        return ContainerInfo(port=host_port, data_dir=cached_dir)
+        try:
+            _wait_for_port(image, host_port)
+        except:
+            if created:
+                LOGGER.debug("Could not connect to '%s' container, so "
+                             "destroying it", image)
+                destroy_container(container_name)
+            raise
+
+        return ContainerInfo(port=host_port,
+                             data_dir=cached_dir,
+                             name=container_name,
+                             new=created)
     except requests.exceptions.ConnectionError:
         raise ProviderNotAvailable("Cannot connect to Docker daemon.")
+
+
+# pylint:disable=too-many-arguments
+def get_or_create_container(docker_client,
+                            container_name,
+                            image,
+                            port,
+                            data_dir=None,
+                            cached_dir=None,
+                            **kwargs):
+    """
+    Get info for an existing container by name, or create a new one
+
+    Parameters:
+        docker_client - a docker.Client object for the Docker daemon
+        container_name - name to check/start
+        image - the image to run a container from
+        port - the port to forward from the container
+        data_dir - the directory to persistently mount inside the container
+        cached_dir - the directory to mount from the host to data_dir
+
+    Return value:
+        A tuple of:
+            - True if the container started as a result of this call
+            - Output from Docker inspect
+    """
+    try:
+        return False, docker_client.inspect_container(container_name)
+    except docker.errors.APIError:
+        try:
+            docker_client.inspect_image(image)
+        except docker.errors.APIError:
+            raise DockerImageRequired(image)
+
+        if data_dir is not None:
+            # Ensure the data volume is mounted
+            kwargs.setdefault('volumes', {})[data_dir] = cached_dir
+
+        docker_client.create_container(
+            image,
+            name=container_name,
+            ports=(port,),
+            **kwargs
+        )
+        container_status = docker_client.inspect_container(container_name)
+
+    return True, container_status
+
+
+def destroy_container(container_name):
+    """
+    Stop and remove a container by name
+    """
+    cache_dir = cache_directory(container_name)
+    docker_client = docker.Client()
+    docker_client.stop(container_name)
+    docker_client.remove_container(container_name)
+    rm_tree_root_owned(cache_dir)
 
 
 def _wait_for_port(image, port, retries=30):
@@ -359,3 +467,11 @@ def log_service_settings(logger, service, *attrs):
                 val = val()
 
             logger.debug("%s %s: %s", service.__class__.__name__, attr, val)
+
+
+def transient_provider(func):
+    """
+    Decorator to mark a provider as transient
+    """
+    func.transient = True
+    return func

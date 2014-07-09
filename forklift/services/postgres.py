@@ -28,6 +28,7 @@ from .base import (ensure_container,
                    ProviderNotAvailable,
                    Service,
                    register,
+                   transient_provider,
                    wait_for)
 
 
@@ -186,6 +187,7 @@ class PostgreSQL(Service):
         )
 
     @classmethod
+    @transient_provider
     def container(cls, application_id):
         """
         PostgreSQL provided by a container.
@@ -212,6 +214,8 @@ class PostgreSQL(Service):
             port=container.port,
         )
         instance.wait_until_available()
+        # pylint:disable=attribute-defined-outside-init
+        instance.container_info = container
         return instance
 
     providers = ('localhost', 'container')

@@ -35,6 +35,8 @@ import forklift
 import forklift.drivers
 import forklift.services
 
+from forklift.services.base import transient_provider
+
 
 DOCKER_AVAILABLE = False
 try:
@@ -84,7 +86,7 @@ class TestService(forklift.services.Service):
             'BAR': '|'.join(self.list),
         }
 
-    providers = ('here',)
+    providers = ('here', 'here_occasionally')
 
     @classmethod
     def here(cls, application_id):
@@ -92,6 +94,14 @@ class TestService(forklift.services.Service):
         A sample provider.
         """
         return cls('localhost', application_id, '2')
+
+    @classmethod
+    @transient_provider
+    def here_occasionally(cls, application_id):
+        """
+        A sample transient provider.
+        """
+        return cls(None, application_id, '2')
 
 
 class TestDriver(forklift.drivers.Driver):
