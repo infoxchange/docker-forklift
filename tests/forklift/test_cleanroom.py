@@ -17,14 +17,22 @@
 Test the --rm and --transient flags
 """
 
-from tests.base import docker, TestCase, TestDriver, TestForklift
+import os.path
+
+import docker
+import docker.errors
+
+from tests.base import (docker as docker_test,
+                        TestCase,
+                        TestDriver,
+                        TestForklift)
 
 
 def assertion_driver(func):
     """
     Create a test driver that runs func to assert test conditions
     """
-    class InnerClass(TestDriver):
+    class InnerClass(TestDriver):  # pylint:disable=missing-docstring
         run = func
 
     return InnerClass
@@ -34,10 +42,60 @@ def assertion_forklift_class(func):
     """
     Create a test forklift class that has only an assertion driver
     """
-    class InnerClass(TestForklift):
+    class InnerClass(TestForklift):  # pylint:disable=missing-docstring
         drivers = {'assertion_driver': assertion_driver(func)}
 
     return InnerClass
+
+
+@docker_test
+class TestRm(TestCase):
+    """
+    Test the --rm flag
+    """
+
+    def test_create_delete(self):
+        """
+        Make sure the container and data dirs are both created and destroyed
+        """
+        client = docker.Client()
+        test_info = {}
+
+        def assertions_func(driver, *_):
+            """
+            Test container/data dir creation
+            """
+            container_info = driver.services[0].container_info
+            test_info['container_name'] = container_info.name
+            test_info['data_dir'] = container_info.data_dir
+
+            self.assertTrue(os.path.isdir(test_info['data_dir']),
+                            "Data dir is created")
+
+            container_inspect = client.inspect_container(
+                test_info['container_name'])
+            self.assertTrue(container_inspect['State']['Running'],
+                            "Container is running")
+
+            return 0
+
+        self.forklift_class = assertion_forklift_class(assertions_func)
+        self.assertEqual(0, self.run_forklift(
+            '--driver', 'assertion_driver',
+            '--service', 'postgis',
+            '--rm',
+            '--', 'fake',
+        ))
+
+        self.assertFalse(os.path.exists(test_info['data_dir']),
+                         "Data dir does not exist")
+
+        with self.assertRaises(docker.errors.APIError) as ex:
+            client.inspect_container(test_info['container_name'])
+
+        ex = ex.exception
+        self.assertEqual(ex.response.status_code, 404)
+        self.assertRegex(ex.explanation, b'No such container')
 
 
 class TestTransient(TestCase):
