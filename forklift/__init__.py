@@ -23,12 +23,11 @@ import logging
 import os
 import pkg_resources
 import pwd
-import random
 import socket
-import string
 import subprocess
 import sys
 import time
+import uuid
 import yaml
 # pylint:disable=no-name-in-module,import-error
 from distutils.spawn import find_executable
@@ -211,13 +210,7 @@ class Forklift(object):
         """
         Set the application id in config to a (probably) unique value
         """
-        self.conf.application_id += (
-            '_%s' % hex(int(time.time() * 1000))[-10:] +
-            ''.join(
-                random.choice(string.ascii_lowercase + string.digits)
-                for _ in range(5)
-            )
-        )
+        self.conf.application_id += '-%s' % uuid.uuid4()
         LOGGER.info("New application ID is '%s'", self.conf.application_id)
 
     @staticmethod
