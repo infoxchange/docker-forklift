@@ -29,10 +29,12 @@ from .base import (cache_directory,
                    container_name_for,
                    ensure_container,
                    log_service_settings,
-                   Service,
+                   ProviderNotAvailable,
                    pipe_split,
                    register,
-                   transient_provider)
+                   Service,
+                   transient_provider,
+                   wait_for)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -45,6 +47,10 @@ class Elasticsearch(Service):
 
     allow_override = ('index_name', 'host')
     allow_override_list = ('urls',)
+
+    _CHECK_AVAILABLE_EXCEPTIONS = (ConnectionError,
+                                   ProviderNotAvailable,
+                                   ValueError)
 
     def __init__(self, index_name, urls):
         self.index_name = index_name
@@ -114,6 +120,15 @@ class Elasticsearch(Service):
 
     def available(self):
         """
+        Wrap check_available so that "expected" exceptions are not raised
+        """
+        try:
+            return self.check_available()
+        except self._CHECK_AVAILABLE_EXCEPTIONS:
+            return False
+
+    def check_available(self):
+        """
         Check whether Elasticsearch is available at a given URL.
         """
 
@@ -121,15 +136,34 @@ class Elasticsearch(Service):
             return False
 
         for url in self.urls:
-            try:
-                es_response = urllib.request.urlopen(url.geturl())
-                es_status = json.loads(es_response.read().decode())
-                if es_status['status'] != 200:
-                    return False
-            except (urllib.request.URLError, ValueError):
-                return False
+            es_response = urllib.request.urlopen(url.geturl())
+            es_status = json.loads(es_response.read().decode())
+            if es_status['status'] != 200:
+                raise ProviderNotAvailable(
+                    ("Provider '{}' is not yet available: HTTP response "
+                     "{}\n{}").format(self.__class__.__name__,
+                                      es_status['status'],
+                                      es_status['error'])
+                )
 
         return True
+
+    def wait_until_available(self, retries=60):
+        """
+        Wait for the Elasticsearch container to be available before returning.
+        If the retry limit is exceeded, ProviderNotAvailable is raised
+
+        Parameters:
+            retries - number of times to retry before giving up
+        """
+        LOGGER.info("Waiting for %s to become available",
+                    self.__class__.__name__)
+        available = wait_for(
+            self.check_available,
+            expected_exceptions=self._CHECK_AVAILABLE_EXCEPTIONS,
+            retries=retries,
+        )
+        return available
 
     @classmethod
     def localhost(cls, application_id):
@@ -177,6 +211,7 @@ class Elasticsearch(Service):
             index_name=application_id,
             urls=('http://localhost:{0}'.format(container.port),),
         )
+        instance.wait_until_available()
         # pylint:disable=attribute-defined-outside-init
         instance.container_info = container
         return instance
