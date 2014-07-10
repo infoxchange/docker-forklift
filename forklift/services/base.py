@@ -93,13 +93,15 @@ class Service(object):
     TEMPORARY_AVAILABILITY_ERRORS = ()
     PERMANENT_AVAILABILITY_ERRORS = ()
 
+    # invalid-name disabled to allow it to conform with other availability
+    # areas constants
     @property
-    def AVAILABILITY_ERRORS(self):
+    def AVAILABILITY_ERRORS(self):  # pylint:disable=invalid-name
         """
         Combine all availability errors
         """
-        return self.TEMPORARY_AVAILABILITY_ERRORS + \
-               self.PERMANENT_AVAILABILITY_ERRORS
+        return (self.TEMPORARY_AVAILABILITY_ERRORS +
+                self.PERMANENT_AVAILABILITY_ERRORS)
 
     @classmethod
     def add_arguments(cls, add_argument):

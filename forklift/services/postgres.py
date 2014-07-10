@@ -28,8 +28,7 @@ from .base import (ensure_container,
                    ProviderNotAvailable,
                    Service,
                    register,
-                   transient_provider,
-                   wait_for)
+                   transient_provider)
 
 
 LOGGER = logging.getLogger(__name__)

@@ -33,8 +33,7 @@ from .base import (cache_directory,
                    pipe_split,
                    register,
                    Service,
-                   transient_provider,
-                   wait_for)
+                   transient_provider)
 
 LOGGER = logging.getLogger(__name__)
 
