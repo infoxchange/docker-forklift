@@ -47,9 +47,10 @@ class PostgreSQL(Service):
     DEFAULT_PORT = 5432
     URL_SCHEME = 'postgres'
 
-    _CHECK_AVAILABLE_EXCEPTIONS = (subprocess.CalledProcessError,
-                                   ProviderNotAvailable,
-                                   OSError)
+    TEMPORARY_AVAILABILITY_ERRORS = (ProviderNotAvailable,)
+    PERMANENT_AVAILABILITY_ERRORS = (ProviderNotAvailable,
+                                     subprocess.CalledProcessError,
+                                     OSError)
 
     allow_override = ('name', 'host', 'port', 'user', 'password')
 
@@ -82,15 +83,6 @@ class PostgreSQL(Service):
         url = '{scheme}://{user}:{password}@{host}:{port}/{name}'.format(
             **details)
         return {env_name: url}
-
-    def available(self):
-        """
-        Wrap check_available so that "expected" exceptions are not raised
-        """
-        try:
-            return self.check_available()
-        except self._CHECK_AVAILABLE_EXCEPTIONS:
-            return False
 
     def check_available(self):
         """
@@ -150,30 +142,6 @@ class PostgreSQL(Service):
             )
 
         return True
-
-    def wait_until_available(self, retries=60):
-        """
-        Wait for the Postgres container to be available before returning. If
-        the retry limit is exceeded, ProviderNotAvailable is raised
-
-        Parameters:
-            retries - number of times to retry before giving up
-        """
-        try:
-            LOGGER.info("Waiting for %s to become available",
-                        self.__class__.__name__)
-            available = wait_for(
-                self.check_available,
-                expected_exceptions=(ProviderNotAvailable,),
-                retries=retries,
-            )
-            return available
-
-        except self._CHECK_AVAILABLE_EXCEPTIONS as ex:
-            print("Error checking for {}: {}".format(
-                self.__class__.__name__, ex
-            ))
-            return False
 
     @classmethod
     def localhost(cls, application_id):
