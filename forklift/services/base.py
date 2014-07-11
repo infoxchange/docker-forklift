@@ -90,6 +90,19 @@ class Service(object):
     # (i.e. hosts, urls)
     allow_override_list = ()
 
+    TEMPORARY_AVAILABILITY_ERRORS = ()
+    PERMANENT_AVAILABILITY_ERRORS = ()
+
+    # invalid-name disabled to allow it to conform with other availability
+    # areas constants
+    @property
+    def AVAILABILITY_ERRORS(self):  # pylint:disable=invalid-name
+        """
+        Combine all availability errors
+        """
+        return (self.TEMPORARY_AVAILABILITY_ERRORS +
+                self.PERMANENT_AVAILABILITY_ERRORS)
+
     @classmethod
     def add_arguments(cls, add_argument):
         """
@@ -165,12 +178,44 @@ class Service(object):
 
     def available(self):
         """
+        Wrap check_available so that "expected" exceptions are not raised
+        """
+        try:
+            return self.check_available()
+        except self.AVAILABILITY_ERRORS:
+            return False
+
+    def check_available(self):
+        """
         Check whether the service is available. Override to implement
         availability checks to warn the user instead of let the application
         fail.
         """
-
         return True
+
+    def wait_until_available(self, retries=60):
+        """
+        Wait for the container to be available before returning. If the retry
+        limit is exceeded, ProviderNotAvailable is raised
+
+        Parameters:
+            retries - number of times to retry before giving up
+        """
+        try:
+            LOGGER.info("Waiting for %s to become available",
+                        self.__class__.__name__)
+            available = wait_for(
+                self.check_available,
+                expected_exceptions=self.TEMPORARY_AVAILABILITY_ERRORS,
+                retries=retries,
+            )
+            return available
+
+        except self.PERMANENT_AVAILABILITY_ERRORS as ex:
+            print("Error checking for {}: {}".format(
+                self.__class__.__name__, ex
+            ))
+            return False
 
     def environment(self):
         """

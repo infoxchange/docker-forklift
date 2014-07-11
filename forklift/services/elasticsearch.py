@@ -29,12 +29,21 @@ from .base import (cache_directory,
                    container_name_for,
                    ensure_container,
                    log_service_settings,
-                   Service,
+                   ProviderNotAvailable,
                    pipe_split,
                    register,
+                   Service,
                    transient_provider)
 
 LOGGER = logging.getLogger(__name__)
+
+
+try:
+    # pylint:disable=undefined-variable,invalid-name
+    CONNECTION_ISSUES_ERROR = ConnectionError
+except NameError:
+    # pylint:disable=invalid-name
+    CONNECTION_ISSUES_ERROR = urllib.error.URLError
 
 
 @register('elasticsearch')
@@ -45,6 +54,11 @@ class Elasticsearch(Service):
 
     allow_override = ('index_name', 'host')
     allow_override_list = ('urls',)
+
+    TEMPORARY_AVAILABILITY_ERRORS = (CONNECTION_ISSUES_ERROR,
+                                     ProviderNotAvailable,
+                                     ValueError)
+    PERMANENT_AVAILABILITY_ERRORS = (urllib.request.URLError,)
 
     def __init__(self, index_name, urls):
         self.index_name = index_name
@@ -112,7 +126,7 @@ class Elasticsearch(Service):
             for url in self.urls
         ]
 
-    def available(self):
+    def check_available(self):
         """
         Check whether Elasticsearch is available at a given URL.
         """
@@ -121,13 +135,15 @@ class Elasticsearch(Service):
             return False
 
         for url in self.urls:
-            try:
-                es_response = urllib.request.urlopen(url.geturl())
-                es_status = json.loads(es_response.read().decode())
-                if es_status['status'] != 200:
-                    return False
-            except (urllib.request.URLError, ValueError):
-                return False
+            es_response = urllib.request.urlopen(url.geturl())
+            es_status = json.loads(es_response.read().decode())
+            if es_status['status'] != 200:
+                raise ProviderNotAvailable(
+                    ("Provider '{}' is not yet available: HTTP response "
+                     "{}\n{}").format(self.__class__.__name__,
+                                      es_status['status'],
+                                      es_status['error'])
+                )
 
         return True
 
@@ -177,6 +193,7 @@ class Elasticsearch(Service):
             index_name=application_id,
             urls=('http://localhost:{0}'.format(container.port),),
         )
+        instance.wait_until_available()
         # pylint:disable=attribute-defined-outside-init
         instance.container_info = container
         return instance
