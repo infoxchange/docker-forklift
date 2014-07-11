@@ -20,6 +20,7 @@ PostgreSQL database service.
 import logging
 import os
 import re
+import string
 import subprocess
 
 from forklift.base import DEVNULL
@@ -160,7 +161,13 @@ class PostgreSQL(Service):
         PostgreSQL provided by a container.
         """
 
-        user = re.sub('[^a-z]', '_', application_id)
+        user = re.sub('[^a-z0-9]', '_', application_id)
+
+        # Postgres DB names can't start with a digit
+        if user[0] in string.digits:
+            user[0] = ('zero', 'one', 'two', 'three', 'four', 'five', 'six',
+                       'seven', 'eight', 'nine')[int(user[0])]
+
         container = ensure_container(
             image=cls.CONTAINER_IMAGE,
             port=cls.DEFAULT_PORT,
