@@ -38,6 +38,14 @@ from .base import (cache_directory,
 LOGGER = logging.getLogger(__name__)
 
 
+try:
+    # pylint:disable=undefined-variable,invalid-name
+    CONNECTION_ISSUES_ERROR = ConnectionError
+except NameError:
+    # pylint:disable=invalid-name
+    CONNECTION_ISSUES_ERROR = urllib.error.URLError
+
+
 @register('elasticsearch')
 class Elasticsearch(Service):
     """
@@ -47,7 +55,7 @@ class Elasticsearch(Service):
     allow_override = ('index_name', 'host')
     allow_override_list = ('urls',)
 
-    TEMPORARY_AVAILABILITY_ERRORS = (ConnectionError,
+    TEMPORARY_AVAILABILITY_ERRORS = (CONNECTION_ISSUES_ERROR,
                                      ProviderNotAvailable,
                                      ValueError)
     PERMANENT_AVAILABILITY_ERRORS = (urllib.request.URLError,)
