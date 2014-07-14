@@ -82,9 +82,15 @@ class Driver(object):
 
     def _run(self, command):
         """
-        Execute a command on the OS.
+        Run the command AS THE CURRENT PROCESS (you will be replaced).
 
-        A hook point for overriding in tests.
+        We also fork and add the child to its own process group. This means
+        that the child will persist after the parent completes and will not
+        receive signals (SIGTERM, SIGKILL, SIGSTOP, etc) from the parent
+        pgroup, and will also not grab standard input from the parent process.
+
+        When the parent process finishes, we return (in the child process) so
+        that the main code path can complete
         """
         child_pid = os.fork()
         if child_pid:
