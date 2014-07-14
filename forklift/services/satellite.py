@@ -34,6 +34,8 @@ def start_satellite(target, args=(), kwargs=None, stop=None):
 
     child_pid = os.fork()
     if not child_pid:
+        # Make sure signals sent by the shell aren't propagated to the
+        # satellite
         os.setpgrp()
         _satellite(target, args, kwargs, stop)
 
@@ -57,6 +59,5 @@ def _satellite(target, args, kwargs, stop):
     if exit_status is None:
         exit_status = 0
 
-    # This is in a child process, so exit without additional cleanup as stated
-    # here: https://docs.python.org/2/library/os.html#os._exit
+    # This is in a child process, so exit without additional cleanup
     os._exit(exit_status)  # pylint:disable=protected-access

@@ -145,7 +145,6 @@ class SaveOutputMixin(forklift.drivers.Driver):
                     # run in the child process.
                     # Also must be os._exit rather than sys.exit because this
                     # is a child process so should not clean up/etc
-                    # https://docs.python.org/2/library/os.html#os._exit
                     os._exit(0)  # pylint:disable=protected-access
                 else:
                     _, status = os.waitpid(pid, 0)
