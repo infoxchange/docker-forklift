@@ -51,16 +51,22 @@ class WaitForPidTestCase(unittest.TestCase):
         """
         waiting = mp.Lock()
 
+        # Start a subprocess to sleep until killed
         proc = mp.Process(target=time.sleep, args=(1000,))
         proc.start()
 
+        # Start a thread to wait for proc to finish
         thread = threading.Thread(target=wait_thread,
                                   args=(proc.pid, waiting))
         thread.start()
 
+        # Wait for both fork and thread to start, then make sure that the lock
+        # is acquired (the thread is waiting)
         time.sleep(1)
         self.assertFalse(waiting.acquire(False))
 
+        # Terminate the forked process, wait, then make sure that the thread
+        # has finished waiting
         proc.terminate()
         time.sleep(2)
         self.assertTrue(waiting.acquire(False))
@@ -74,20 +80,28 @@ class WaitForPidTestCase(unittest.TestCase):
             """
             Start a process to wait on this one then sleep
             """
+            # Start a process to watch this PID
             child = mp.Process(target=wait_thread,
                                args=(os.getpid(), lock))
             child.start()
+
+            # Sleep until killed
             time.sleep(1000)
 
+        # Start a process (child) to spawn another child (our grandchild) that
+        # will wait for our child to be killed
         waiting = mp.Lock()
         proc = mp.Process(target=parent_proc,
                           args=(waiting,))
-
         proc.start()
 
+        # Wait for both child and grandchild to have started, then make sure
+        # that the lock is acquired (the grandchild is waiting)
         time.sleep(1)
         self.assertFalse(waiting.acquire(False))
 
+        # Terminate our child, wait, then make sure that the grandchild has
+        # finished waiting
         proc.terminate()
         time.sleep(2)
         self.assertTrue(waiting.acquire(False))
