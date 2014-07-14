@@ -113,7 +113,7 @@ def rm_tree_root_owned(path):
     """
     Do an equivalent of shutil.rmtree, but as root
     """
-    subprocess.check_call(['sudo', 'rm', '-r', path])
+    subprocess.check_call(['sudo', 'rm', '-rf', path])
 
 
 class ImproperlyConfigured(Exception):
