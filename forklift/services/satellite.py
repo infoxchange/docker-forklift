@@ -18,9 +18,9 @@ Satellite processes started by Forklift itself to provide services.
 """
 
 import os
-from multiprocessing import Process  # pylint:disable=no-name-in-module
-from time import sleep
 from threading import Thread
+
+from forklift.base import wait_for_parent
 
 
 def start_satellite(target, args=(), kwargs=None, stop=None):
@@ -32,19 +32,16 @@ def start_satellite(target, args=(), kwargs=None, stop=None):
     if kwargs is None:
         kwargs = {}
 
-    proc = Process(target=_satellite, args=(target, args, kwargs, stop))
-    proc.daemon = True
-    proc.start()
+    child_pid = os.fork()
+    if not child_pid:
+        os.setpgrp()
+        _satellite(target, args, kwargs, stop)
 
 
 def _satellite(target, args, kwargs, stop):
     """
     Run the target, killing it after the parent exits.
     """
-
-    # Make sure signals sent by the shell aren't propagated to the satellite
-    # process
-    os.setpgrp()
 
     # Run target daemonized.
     payload = Thread(
@@ -55,12 +52,11 @@ def _satellite(target, args, kwargs, stop):
     payload.daemon = True
     payload.start()
 
-    # Cannot wait for the process that's not our child
-    ppid = os.getppid()
-    try:
-        while True:
-            os.kill(ppid, 0)
-            sleep(1)
-    except OSError:
-        if stop:
-            stop()
+    wait_for_parent()
+    exit_status = stop() if stop is not None else None
+    if exit_status is None:
+        exit_status = 0
+
+    # This is in a child process, so exit without additional cleanup as stated
+    # here: https://docs.python.org/2/library/os.html#os._exit
+    os._exit(exit_status)  # pylint:disable=protected-access

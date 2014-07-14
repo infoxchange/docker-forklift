@@ -38,6 +38,7 @@ from forklift.base import (
     free_port,
     ImproperlyConfigured,
     wait_for,
+    wait_for_parent,
 )
 from forklift.registry import Registry
 
@@ -85,8 +86,12 @@ class Driver(object):
 
         A hook point for overriding in tests.
         """
-
-        os.execvp(command[0], command)
+        child_pid = os.fork()
+        if child_pid:
+            os.execvp(command[0], command)
+        else:
+            os.setpgrp()
+            wait_for_parent()
 
     def base_environment(self):
         """
