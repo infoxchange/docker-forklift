@@ -120,5 +120,6 @@ class Memcache(Service):
             key_prefix=application_id,
             hosts=['localhost:{0}'.format(container.port)],
         )
+        # pylint:disable=attribute-defined-outside-init
         instance.container_info = container
         return instance
