@@ -140,6 +140,12 @@ class SaveOutputMixin(forklift.drivers.Driver):
                 assert pid >= 0
                 if pid == 0:
                     super()._run(command)
+
+                    # We MUST exit here, or the test suite will continue to
+                    # run in the child process.
+                    # Also must be os._exit rather than sys.exit because this
+                    # is a child process so should not clean up/etc
+                    os._exit(0)  # pylint:disable=protected-access
                 else:
                     _, status = os.waitpid(pid, 0)
                     retcode = status >> 8
@@ -172,6 +178,8 @@ class TestForklift(forklift.Forklift):
     """
 
     drivers = {
+        # Drivers MUST always inherit from SaveOutputMixin. See the comment in
+        # the fork code of _run there for reasoning
         'direct': SaveOutputDirect,
         'docker': SaveOutputDocker,
     }

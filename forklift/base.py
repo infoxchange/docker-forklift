@@ -23,6 +23,8 @@ import subprocess
 import tempfile
 import time
 
+import psutil
+
 from contextlib import contextmanager
 
 
@@ -67,6 +69,31 @@ def wait_for(func, expected_exceptions=(), retries=60):
         time.sleep(1)
 
     return return_value
+
+
+def wait_for_parent():
+    """
+    Use wait_for_pid to wait for your parent process
+    """
+    wait_for_pid(os.getppid())
+
+
+def wait_for_pid(pid):
+    """
+    Wait for a given PID in the best way possible. If PID is a child, we use
+    os.waitpid. Otherwise, we fall back to a polling approach.
+    """
+    try:
+        # Try to wait for a child
+        os.waitpid(pid, 0)
+    except OSError:
+        # Fallback to polling process status
+        try:
+            proc = psutil.Process(pid)
+            while proc.status() not in ('zombie', 'dead'):
+                time.sleep(1)
+        except psutil.NoSuchProcess:
+            pass
 
 
 @contextmanager
