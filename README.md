@@ -14,6 +14,9 @@ original command, so that one can run arbitary commands inside.
 Installation
 ------------
 
+Make sure that you have python headers installed
+(`sudo apt-get install python3-dev` on Debian).
+
 Install the package from pip:
 
     sudo pip install docker-forklift
