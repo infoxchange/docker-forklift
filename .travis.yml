@@ -21,4 +21,4 @@ deploy:
     on:
         tags: true
         python: 3.4
-        condition: bash -c '[ "$TRAVIS_TAG" == "v$(python setup.py --version)" ]'
+        condition: $TRAVIS_TAG = "v$(python setup.py --version)"
