@@ -18,8 +18,10 @@ Elasticsearch service.
 """
 
 import json
+import http.client
 import logging
 import os
+import socket
 import urllib.request
 
 from os.path import join
@@ -56,7 +58,9 @@ class Elasticsearch(Service):
     allow_override_list = ('urls',)
 
     TEMPORARY_AVAILABILITY_ERRORS = (CONNECTION_ISSUES_ERROR,
+                                     http.client.HTTPException,
                                      ProviderNotAvailable,
+                                     socket.error,
                                      ValueError)
     PERMANENT_AVAILABILITY_ERRORS = (urllib.request.URLError,)
 
