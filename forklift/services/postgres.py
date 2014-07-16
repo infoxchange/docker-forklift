@@ -42,7 +42,7 @@ class PostgreSQL(Service):
     """
 
     CHECK_COMMAND = 'select version()'
-    CONTAINER_IMAGE = 'paintedfox/postgseql'
+    CONTAINER_IMAGE = 'paintedfox/postgresql'
     DATABASE_NAME = 'DEFAULT'
     DEFAULT_PORT = 5432
     URL_SCHEME = 'postgres'
