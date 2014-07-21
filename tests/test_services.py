@@ -114,6 +114,18 @@ class MemcacheTestCase(unittest.TestCase):
             'elsewhere:11211',
         ])
 
+    def test_set_only_host(self):
+        """
+        Test that when setting hosts, the ports are kept
+        """
+        service = forklift.services.Memcache(
+            'index',
+            ['localhost', 'localhost:22111', 'alpha', 'beta:11222'])
+        service.host = '2.2.2.2|3.3.3.3|gamma|delta'
+        self.assertEqual(service.hosts, [
+            '2.2.2.2:11211', '3.3.3.3:22111', 'gamma:11211', 'delta:11222'
+        ])
+
 
 class SyslogTestCase(unittest.TestCase):
     """
