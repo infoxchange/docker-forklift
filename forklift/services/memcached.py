@@ -17,6 +17,8 @@
 Memcache service.
 """
 
+from itertools import chain, repeat
+
 from .base import (
     ensure_container,
     Service,
@@ -88,10 +90,16 @@ class Memcache(Service):
         """
         Set the host to access Memcache at.
         """
-
+        ports = chain(
+            (
+                split_host_port(h, self.DEFAULT_PORT)[1]
+                for h in self.hosts
+            ),
+            repeat(self.DEFAULT_PORT),
+        )
         self.hosts = [
-            h if ':' in h else '{0}:{1}'.format(h, self.DEFAULT_PORT)
-            for h in host.split('|')
+            '{0}:{1}'.format(h, p)
+            for h, p in zip(host.split('|'), ports)
         ]
 
     @classmethod
