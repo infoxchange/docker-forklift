@@ -193,6 +193,16 @@ and if successful, the application ID is provided to use as the key prefix.
 
 The following parameters can be overridden: `hosts`, `key_prefix`.
 
+### Redis
+
+Provides the settings `REDIS_HOSTS`, a pipe-separate list of hosts running
+Redis and `REDIS_DB_INDEX`, a DB-index you should use.
+
+The following parameters can be overriden: `host`, `db_index`.
+
+By default `db_index` will be 0 unless overridden in your config.
+
+
 Configuration
 -------------
 
