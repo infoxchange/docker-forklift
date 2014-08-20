@@ -79,6 +79,7 @@ disable=
     no-self-use,
     star-args,
     super-on-old-class,
+    too-few-public-methods,
     too-many-public-methods,
     RP0101,
     RP0401,

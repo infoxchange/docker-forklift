@@ -47,34 +47,34 @@ class ElasticsearchTestCase(unittest.TestCase):
             'index',
             ('http://alpha:9200|http://beta:9200',))
 
-        self.assertEqual(service.urls, [
-            urlparse('http://alpha:9200'),
-            urlparse('http://beta:9200'),
-        ])
-        self.assertEqual(
-            service.environment()['ELASTICSEARCH_URLS'],
-            'http://alpha:9200|http://beta:9200'
-        )
+        self.assertEqual(service.urls, (
+            urlparse('http://alpha:9200/index'),
+            urlparse('http://beta:9200/index'),
+        ))
+        self.assertEqual(service.environment(), {
+            'ELASTICSEARCH_URLS': 'http://alpha:9200|http://beta:9200',
+            'ELASTICSEARCH_INDEX_NAME': 'index',
+        })
         self.assertEqual(service.host, 'alpha|beta')
 
-        service.host = 'elsewhere'
+        service.host = 'other'
 
-        self.assertEqual(service.urls, [
-            urlparse('http://elsewhere:9200'),
-            urlparse('http://elsewhere:9200'),
-        ])
-        self.assertEqual(
-            service.environment()['ELASTICSEARCH_URLS'],
-            'http://elsewhere:9200|http://elsewhere:9200'
-        )
+        self.assertEqual(service.urls, (
+            urlparse('http://other:9200/index'),
+            urlparse('http://other:9200/index'),
+        ))
+        self.assertEqual(service.environment(), {
+            'ELASTICSEARCH_URLS': 'http://other:9200|http://other:9200',
+            'ELASTICSEARCH_INDEX_NAME': 'index',
+        })
 
         service = forklift.services.Elasticsearch(
             'index',
             ('http://localhost:9200',))
 
-        self.assertEqual(service.urls, [
-            urlparse('http://localhost:9200'),
-        ])
+        self.assertEqual(service.urls, (
+            urlparse('http://localhost:9200/index'),
+        ))
         self.assertEqual(service.host, 'localhost')
 
         service = forklift.services.Elasticsearch(
@@ -82,10 +82,14 @@ class ElasticsearchTestCase(unittest.TestCase):
             ('http://alpha:9200',
              'http://beta:9200'))
 
-        self.assertEqual(service.urls, [
-            urlparse('http://alpha:9200'),
-            urlparse('http://beta:9200'),
-        ])
+        self.assertEqual(service.urls, (
+            urlparse('http://alpha:9200/index'),
+            urlparse('http://beta:9200/index'),
+        ))
+        self.assertEqual(service.environment(), {
+            'ELASTICSEARCH_URLS': 'http://alpha:9200|http://beta:9200',
+            'ELASTICSEARCH_INDEX_NAME': 'index',
+        })
 
 
 class MemcacheTestCase(unittest.TestCase):
@@ -108,10 +112,10 @@ class MemcacheTestCase(unittest.TestCase):
         ])
         self.assertEqual(service.host, 'alpha|beta')
 
-        service.host = 'elsewhere'
+        service.host = 'other'
 
         self.assertEqual(service.hosts, [
-            'elsewhere:11211',
+            'other:11211',
         ])
 
     def test_set_only_host(self):

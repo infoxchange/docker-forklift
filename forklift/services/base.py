@@ -22,6 +22,7 @@ import logging
 import os
 import socket
 import sys
+import urllib.parse
 
 import docker
 
@@ -250,6 +251,105 @@ class Service(object):
                          self.__class__.__name__)
 
         return True
+
+
+def replace_part(url, part, value):
+    """
+    Replace a part of the URL with a new value.
+
+    part can be any property of urllib.parse.ParseResult.
+    """
+
+    if part == 'hostname':
+        kwargs = {'netloc': '{hostname}:{port}'.format(
+            hostname=value, port=url.port)}
+    elif part == 'port':
+        kwargs = {'netloc': '{hostname}:{port}'.format(
+            hostname=url.hostname, port=value)}
+    else:
+        kwargs = {part: value}
+
+    # pylint:disable=protected-access
+    return url._replace(**kwargs)
+
+
+class URLPartDescriptor(object):
+    """
+    A descriptor to get or set an URL part for all the URLs of the class.
+    """
+
+    def __init__(self, part):
+        self.part = part
+
+    def __get__(self, instance, owner):
+        """
+        Get the URL part for all URLs in the instance.
+        """
+
+        if instance is None:
+            return self
+        return '|'.join(getattr(url, self.part) for url in instance.urls)
+
+    def __set__(self, instance, value):
+        """
+        Set the URL part for all URLs in the instance.
+        """
+
+        instance.urls = tuple(
+            replace_part(url, self.part, value)
+            for url in instance.urls
+        )
+
+
+class URLService(Service):
+    """
+    A service specified by a set of URLs.
+
+    This is a common 12 factor pattern and should be used instead of inheriting
+    Service directly as much as possible.
+    """
+
+    # These set respective attributes on all the URLs.
+    allow_override = ('user', 'password', 'host', 'port', 'path')
+
+    allow_override_list = ('urls')
+
+    def __init__(self, urls):
+        self._urls = ()
+        self.urls = urls
+
+        log_service_settings(LOGGER, self, 'urls')
+
+    def url_string(self):
+        """
+        All URLs joined as a string.
+        """
+        return '|'.join(url.geturl() for url in self.urls)
+
+    @property
+    def urls(self):
+        """
+        The array of the URLs the service can be accessed at.
+        """
+
+        return self._urls
+
+    @urls.setter
+    def urls(self, urls):
+        """
+        Set the URLs to access the service at.
+        """
+
+        self._urls = tuple(
+            urllib.parse.urlparse(url) if isinstance(url, str) else url
+            for url in pipe_split(urls)
+        )
+
+    user = URLPartDescriptor('user')
+    password = URLPartDescriptor('password')
+    host = hostname = URLPartDescriptor('hostname')
+    port = URLPartDescriptor('port')
+    path = URLPartDescriptor('path')
 
 
 class ProviderNotAvailable(Exception):
