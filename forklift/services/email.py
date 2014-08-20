@@ -90,4 +90,4 @@ class Email(Service):
         instance.wait_until_available()
         return instance
 
-    providers = ('localhost',)
+    providers = ('localhost', 'stdout')
