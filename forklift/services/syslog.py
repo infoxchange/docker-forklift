@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Proxy service.
+Syslog service.
 """
 
 import socket
