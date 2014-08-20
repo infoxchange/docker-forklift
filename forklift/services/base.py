@@ -36,17 +36,25 @@ LOGGER = logging.getLogger(__name__)
 register = Registry()  # pylint:disable=invalid-name
 
 
+def try_port(host, port):
+    """
+    Try to connect to a given TCP port.
+    """
+
+    with socket.socket() as sock:
+        sock.connect((host, int(port)))
+        return True
+
+
 def port_open(host, port):
     """
     Check whether the specified TCP port is open.
     """
 
-    with socket.socket() as sock:
-        try:
-            sock.connect((host, int(port)))
-            return True
-        except socket.error:
-            return False
+    try:
+        return try_port(host, port)
+    except socket.error:
+        return False
 
 
 def split_host_port(host_port, default_port):
