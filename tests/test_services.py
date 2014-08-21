@@ -186,9 +186,6 @@ class EmailTestCase(unittest.TestCase):
             with redirect_stream(tmpfile.file.fileno()):
                 email = forklift.services.Email.stdout('fake_app')
 
-                # Wait for the server to start
-                sleep(1)
-
                 self.assertTrue(email.available())
                 env = email.environment()
 
