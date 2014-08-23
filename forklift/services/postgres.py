@@ -26,8 +26,7 @@ import subprocess
 from forklift.base import DEVNULL
 from .base import (ensure_container,
                    ProviderNotAvailable,
-                   URL_NAME,
-                   URLLens,
+                   URLNameLens,
                    URLService,
                    register,
                    transient_provider)
@@ -55,7 +54,7 @@ class PostgreSQL(URLService):
 
     allow_override = URLService.allow_override + ('name',)
 
-    name = URLLens(URL_NAME)
+    name = URLNameLens()
 
     # pylint:disable=too-many-arguments
     def __init__(self,

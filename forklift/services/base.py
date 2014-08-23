@@ -71,6 +71,8 @@ def pipe_split(value):
     Split a pipe-separated string if it's the only value in an array.
     """
 
+    value = tuple(value)
+
     if len(value) == 1 and '|' in value[0]:
         return value[0].split('|')
     else:
@@ -325,10 +327,18 @@ class URLLens(object):
         )
 
 
-URL_NAME = (
-    lambda url: url.path.lstrip('/'),
-    lambda url, value: replace_part(url, 'path', '/' + value),
-)
+class URLNameLens(URLLens):
+    """
+    A descriptor to get or set the URL path without a leading slash,
+    commonly used when mapping an alphanumeric namespace (e.g. database names)
+    onto URLs.
+    """
+
+    def __init__(self):
+        super().__init__((
+            lambda url: url.path.lstrip('/'),
+            lambda url, value: replace_part(url, 'path', '/' + value),
+        ))
 
 
 class URLService(Service):
@@ -378,7 +388,7 @@ class URLService(Service):
     user = URLLens('username')
     password = URLLens('password')
     host = hostname = URLLens('hostname')
-    port = URLLens('port', joiner=lambda p, *ps: p)
+    port = URLLens('port', joiner=lambda ps: next(iter(ps)))
     path = URLLens('path')
 
 

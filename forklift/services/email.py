@@ -18,11 +18,11 @@ Proxy service.
 """
 
 from forklift.base import free_port
-from .base import Service, port_open, register, transient_provider
+from .base import URLService, port_open, register, transient_provider
 
 
 @register('email')
-class Email(Service):
+class Email(URLService):
     """
     An MTA for the application.
     """
@@ -30,8 +30,12 @@ class Email(Service):
     allow_override = ('host', 'port')
 
     def __init__(self, host, port=25):
-        self.host = host
-        self.port = port
+        super().__init__((
+            'smtp://{host}:{port}/'.format(
+                host=host,
+                port=port,
+            ),
+        ))
 
     def environment(self):
         """
