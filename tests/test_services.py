@@ -254,6 +254,11 @@ class ServicesAPITestCase(unittest.TestCase):
             assert hasattr(service, 'environment')
             assert hasattr(service, 'available')
 
+            # Test all attributes in allow_override exist
+            for attr in service.allow_override:
+                value = getattr(service, attr)
+                setattr(service, attr, value)
+
 
 class BaseTestCase(unittest.TestCase):
     """

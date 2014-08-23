@@ -25,9 +25,10 @@ import subprocess
 
 from forklift.base import DEVNULL
 from .base import (ensure_container,
-                   log_service_settings,
                    ProviderNotAvailable,
-                   Service,
+                   URL_NAME,
+                   URLLens,
+                   URLService,
                    register,
                    transient_provider)
 
@@ -36,7 +37,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 @register('postgres')
-class PostgreSQL(Service):
+class PostgreSQL(URLService):
     """
     PostgreSQL service provided by the host machine.
     """
@@ -52,7 +53,9 @@ class PostgreSQL(Service):
                                      subprocess.CalledProcessError,
                                      OSError)
 
-    allow_override = ('name', 'host', 'port', 'user', 'password')
+    allow_override = URLService.allow_override + ('name',)
+
+    name = URLLens(URL_NAME)
 
     # pylint:disable=too-many-arguments
     def __init__(self,
@@ -61,16 +64,16 @@ class PostgreSQL(Service):
                  port=DEFAULT_PORT,
                  user=None,
                  password=None):
-        self.host = host
-        self.port = port
-        self.name = name
-        self.user = user
-        self.password = password
-
-        log_service_settings(
-            LOGGER, self,
-            'name', 'host', 'port', 'name', 'user', 'password'
-        )
+        super().__init__((
+            '{scheme}://{user}:{password}@{host}:{port}/{name}'.format(
+                scheme=self.URL_SCHEME,
+                user=user,
+                password=password,
+                host=host,
+                port=port,
+                name=name,
+            ),
+        ))
 
     def environment(self):
         """
@@ -78,11 +81,7 @@ class PostgreSQL(Service):
         """
 
         env_name = 'DB_{0}_URL'.format(self.DATABASE_NAME)
-        details = {k: v or '' for k, v in self.__dict__.items()}
-        details['scheme'] = self.URL_SCHEME
-        url = '{scheme}://{user}:{password}@{host}:{port}/{name}'.format(
-            **details)
-        return {env_name: url}
+        return {env_name: self.urls[0]}
 
     def check_available(self):
         """

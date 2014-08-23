@@ -17,12 +17,14 @@
 Services that can be provided to running applications - base definitions.
 """
 
-from collections import namedtuple
 import logging
 import os
 import socket
 import sys
 import urllib.parse
+
+from collections import namedtuple
+from operator import attrgetter
 
 import docker
 
@@ -260,12 +262,16 @@ def replace_part(url, part, value):
     part can be any property of urllib.parse.ParseResult.
     """
 
-    if part == 'hostname':
-        kwargs = {'netloc': '{hostname}:{port}'.format(
-            hostname=value, port=url.port)}
-    elif part == 'port':
-        kwargs = {'netloc': '{hostname}:{port}'.format(
-            hostname=url.hostname, port=value)}
+    netloc_parts = ('username', 'password', 'hostname', 'port')
+
+    if part in netloc_parts:
+        # Reassemble netloc
+        netloc = {
+            p: getattr(url, p)
+            for p in netloc_parts
+        }
+        netloc[part] = value
+        kwargs = {'netloc': '{hostname}:{port}'.format(**netloc)}
     else:
         kwargs = {part: value}
 
@@ -273,13 +279,28 @@ def replace_part(url, part, value):
     return url._replace(**kwargs)
 
 
-class URLPartDescriptor(object):
+class URLLens(object):
     """
     A descriptor to get or set an URL part for all the URLs of the class.
     """
 
-    def __init__(self, part):
-        self.part = part
+    def __init__(self, part, default='', joiner='|'.join):
+        """
+        Initialise a descriptor to get or set an URL part.
+
+        Parameters:
+            part - the part to get, can be a string or a descriptor
+            default - filler for missing parts of the URL, defaults to ''
+            joiner - how to join the parts from the URL array together;
+            defaults to concatenating with '|' in between
+        """
+        if isinstance(part, str):
+            self.getter = attrgetter(part)
+            self.setter = lambda url, value: replace_part(url, part, value)
+        else:
+            (self.getter, self.setter) = part
+        self.default = default
+        self.joiner = joiner
 
     def __get__(self, instance, owner):
         """
@@ -288,7 +309,10 @@ class URLPartDescriptor(object):
 
         if instance is None:
             return self
-        return '|'.join(getattr(url, self.part) for url in instance.urls)
+        return self.joiner(
+            self.getter(url) or self.default
+            for url in instance.urls
+        )
 
     def __set__(self, instance, value):
         """
@@ -296,9 +320,15 @@ class URLPartDescriptor(object):
         """
 
         instance.urls = tuple(
-            replace_part(url, self.part, value)
+            self.setter(url, value)
             for url in instance.urls
         )
+
+
+URL_NAME = (
+    lambda url: url.path.lstrip('/'),
+    lambda url, value: replace_part(url, 'path', '/' + value),
+)
 
 
 class URLService(Service):
@@ -345,11 +375,11 @@ class URLService(Service):
             for url in pipe_split(urls)
         )
 
-    user = URLPartDescriptor('user')
-    password = URLPartDescriptor('password')
-    host = hostname = URLPartDescriptor('hostname')
-    port = URLPartDescriptor('port')
-    path = URLPartDescriptor('path')
+    user = URLLens('username')
+    password = URLLens('password')
+    host = hostname = URLLens('hostname')
+    port = URLLens('port', joiner=lambda p, *ps: p)
+    path = URLLens('path')
 
 
 class ProviderNotAvailable(Exception):

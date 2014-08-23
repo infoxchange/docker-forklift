@@ -33,6 +33,8 @@ from .base import (cache_directory,
                    pipe_split,
                    replace_part,
                    register,
+                   URL_NAME,
+                   URLLens,
                    URLService,
                    transient_provider)
 
@@ -54,6 +56,8 @@ class Elasticsearch(URLService):
     """
 
     allow_override = URLService.allow_override + ('index_name',)
+
+    index_name = URLLens(URL_NAME)
 
     TEMPORARY_AVAILABILITY_ERRORS = (CONNECTION_ISSUES_ERROR,
                                      http.client.HTTPException,
