@@ -21,36 +21,41 @@ import logging
 import socket
 from telnetlib import Telnet
 
-from .base import (Service,
-                   ensure_container,
-                   register,
-                   split_host_port,
-                   transient_provider)
+from .base import (
+    ensure_container,
+    register,
+    split_host_port,
+    transient_provider,
+    URLNameLens,
+    URLService,
+)
 
 LOGGER = logging.getLogger(__name__)
 
 
 @register('redis')
-class Redis(Service):
+class Redis(URLService):
     """
     A Redis service
 
     This is a single Redis server.
     """
 
-    allow_override = ('host', 'db_index')
+    allow_override = URLService.allow_override + ('db_index',)
+    db_index = URLNameLens()
+
     providers = ('localhost', 'container')
 
     DEFAULT_PORT = 6379
 
     TEMPORARY_AVAILABILITY_ERRORS = (socket.error,)
 
-    def __init__(self,
-                 host=None,
-                 db_index=0):
+    def __init__(self, host, db_index=0):
         # FIXME: we don't support multiple redis servers yet
-        self.host = host
-        self.db_index = db_index
+        super().__init__('redis://{host}/{db_index}'.format(
+            host=host,
+            db_index=db_index,
+        ))
 
     def environment(self):
         """
