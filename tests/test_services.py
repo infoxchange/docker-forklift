@@ -55,16 +55,14 @@ class ElasticsearchTestCase(unittest.TestCase):
             'ELASTICSEARCH_URLS': 'http://alpha:9200|http://beta:9200',
             'ELASTICSEARCH_INDEX_NAME': 'index',
         })
-        self.assertEqual(service.host, 'alpha|beta')
 
         service.host = 'other'
 
         self.assertEqual(service.urls, (
             urlparse('http://other:9200/index'),
-            urlparse('http://other:9200/index'),
         ))
         self.assertEqual(service.environment(), {
-            'ELASTICSEARCH_URLS': 'http://other:9200|http://other:9200',
+            'ELASTICSEARCH_URLS': 'http://other:9200',
             'ELASTICSEARCH_INDEX_NAME': 'index',
         })
 
@@ -106,29 +104,24 @@ class MemcacheTestCase(unittest.TestCase):
             'index',
             ['alpha', 'beta:11222'])
 
-        self.assertEqual(service.hosts, [
+        self.assertEqual(service.hosts, (
             'alpha',
             'beta:11222',
-        ])
-        self.assertEqual(service.host, 'alpha|beta')
+        ))
 
         service.host = 'other'
 
-        self.assertEqual(service.hosts, [
-            'other:11211',
-        ])
+        self.assertEqual(service.hosts, (
+            'other',
+        ))
 
-    def test_set_only_host(self):
-        """
-        Test that when setting hosts, the ports are kept
-        """
         service = forklift.services.Memcache(
             'index',
             ['localhost', 'localhost:22111', 'alpha', 'beta:11222'])
         service.host = '2.2.2.2|3.3.3.3|gamma|delta'
-        self.assertEqual(service.hosts, [
-            '2.2.2.2:11211', '3.3.3.3:22111', 'gamma:11211', 'delta:11222'
-        ])
+        self.assertEqual(service.hosts, (
+            '2.2.2.2', '3.3.3.3', 'gamma', 'delta'
+        ))
 
 
 class SyslogTestCase(unittest.TestCase):

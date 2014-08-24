@@ -71,9 +71,14 @@ def pipe_split(value):
     Split a pipe-separated string if it's the only value in an array.
     """
 
-    value = tuple(value)
+    if isinstance(value, str):
+        value = (value,)
+    try:
+        value = tuple(value)
+    except TypeError:
+        value = (value,)
 
-    if len(value) == 1 and '|' in value[0]:
+    if len(value) == 1 and isinstance(value[0], str) and '|' in value[0]:
         return value[0].split('|')
     else:
         return value
@@ -281,6 +286,16 @@ def replace_part(url, part, value):
     return url._replace(**kwargs)
 
 
+def replace_hostinfo(url, hostname, port):
+    """
+    Replace host and port in the URL.
+    """
+
+    url = replace_part(url, 'hostname', hostname)
+    url = replace_part(url, 'port', port)
+    return url
+
+
 class URLLens(object):
     """
     A descriptor to get or set an URL part for all the URLs of the class.
@@ -291,7 +306,7 @@ class URLLens(object):
         Initialise a descriptor to get or set an URL part.
 
         Parameters:
-            part - the part to get, can be a string or a descriptor
+            part - the part to get, can be a string or a tuple of (get, set)
             default - filler for missing parts of the URL, defaults to ''
             joiner - how to join the parts from the URL array together;
             defaults to concatenating with '|' in between
@@ -341,6 +356,66 @@ class URLNameLens(URLLens):
         ))
 
 
+class URLMultiValueLens(URLLens):
+    """
+    A descriptor to get or set part of the URLs to an array of values.
+    """
+
+    def __init__(self, part, default='', joiner=lambda xs: next(iter(xs))):
+        super().__init__(part, default, joiner)
+
+    def __set__(self, instance, value):
+        """
+        Set the URL part to an array of values.
+
+        After setting this, all the URLs will be identical except for hostinfo
+        taken from the (iterable) value assigned. The rest of the URL
+        parameters will be copied from the first one.
+        """
+
+        url = instance.urls[0]
+        instance.urls = tuple(
+            self.setter(url, v)
+            for v in pipe_split(value)
+        )
+
+
+class URLHostInfoLens(URLMultiValueLens):
+    """
+    A descriptor to get or set hostinfo pairs (hostname:port), accounting for
+    default port.
+    """
+
+    def get_hostinfo(self, url):
+        """
+        Get the hostname:port pair of the URL.
+        """
+
+        port = url.port
+        if port == self.default_port:
+            return url.hostname
+        else:
+            return ':'.join((url.hostname, str(port)))
+
+    def set_hostinfo(self, url, value):
+        """
+        Set the hostname:port pair of the URL.
+        """
+
+        host, port = split_host_port(value, self.default_port)
+        return replace_hostinfo(url, host, port)
+
+    def __init__(self, default_port, joiner=lambda xs: next(iter(xs))):
+        self.default_port = default_port
+        super().__init__(
+            (
+                self.get_hostinfo,
+                self.set_hostinfo,
+            ),
+            joiner=joiner,
+        )
+
+
 class URLService(Service):
     """
     A service specified by a set of URLs.
@@ -352,7 +427,7 @@ class URLService(Service):
     # These set respective attributes on all the URLs.
     allow_override = ('user', 'password', 'host', 'port', 'path')
 
-    allow_override_list = ('urls')
+    allow_override_list = ('urls',)
 
     def __init__(self, urls):
         self._urls = ()
@@ -387,8 +462,8 @@ class URLService(Service):
 
     user = URLLens('username')
     password = URLLens('password')
-    host = hostname = URLLens('hostname')
-    port = URLLens('port', joiner=lambda ps: next(iter(ps)))
+    host = hostname = URLMultiValueLens('hostname')
+    port = URLMultiValueLens('port')
     path = URLLens('path')
 
 

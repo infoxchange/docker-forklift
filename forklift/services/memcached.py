@@ -17,11 +17,11 @@
 Memcache service.
 """
 
-from itertools import chain, repeat
-
 from .base import (
     ensure_container,
-    Service,
+    URLHostInfoLens,
+    URLNameLens,
+    URLService,
     port_open,
     register,
     split_host_port,
@@ -30,23 +30,35 @@ from .base import (
 
 
 @register('memcache')
-class Memcache(Service):
+class Memcache(URLService):
     """
     Memcache service for the application.
     """
 
-    allow_override = ('key_prefix', 'host')
-    allow_override_list = ('hosts',)
-    providers = ('localhost', 'container')
-
     DEFAULT_PORT = 11211
+
+    allow_override = URLService.allow_override + ('key_prefix',)
+    allow_override_list = URLService.allow_override_list + ('hosts',)
+    key_prefix = URLNameLens()
+    hosts = URLHostInfoLens(default_port=DEFAULT_PORT, joiner=tuple)
+
+    providers = ('localhost', 'container')
 
     def __init__(self,
                  key_prefix='',
                  hosts=None):
 
-        self.key_prefix = key_prefix
-        self.hosts = hosts or []
+        super().__init__(
+            'memcache://{host}:{port}/{key_prefix}'.format(
+                host=host,
+                port=port,
+                key_prefix=key_prefix,
+            )
+            for host, port in (
+                split_host_port(h, self.DEFAULT_PORT)
+                for h in hosts
+            )
+        )
 
     def environment(self):
         """
@@ -73,34 +85,6 @@ class Memcache(Service):
                 return True
 
         return False
-
-    @property
-    def host(self):
-        """
-        The (pipe separated) hosts for the Memcache service.
-        """
-
-        return '|'.join(
-            split_host_port(host, self.DEFAULT_PORT)[0]
-            for host in self.hosts
-        )
-
-    @host.setter
-    def host(self, host):
-        """
-        Set the host to access Memcache at.
-        """
-        ports = chain(
-            (
-                split_host_port(h, self.DEFAULT_PORT)[1]
-                for h in self.hosts
-            ),
-            repeat(self.DEFAULT_PORT),
-        )
-        self.hosts = [
-            '{0}:{1}'.format(h, p)
-            for h, p in zip(host.split('|'), ports)
-        ]
 
     @classmethod
     def localhost(cls, application_id):
