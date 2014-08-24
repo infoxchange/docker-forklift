@@ -17,20 +17,20 @@
 Proxy service.
 """
 
-from .base import Service, port_open, register, transient_provider
+from .base import URLService, port_open, register, transient_provider
 
 
 @register('proxy')
-class Proxy(Service):
+class Proxy(URLService):
     """
     Proxy service for the application.
     """
 
-    allow_override = ('host', 'port')
-
-    def __init__(self, host=None, port=None):
-        self.host = host
-        self.port = port
+    def __init__(self, host='', port=None):
+        super().__init__('http://{host}{port}'.format(
+            host=host or '',
+            port=':' + str(port) if port else '',
+        ))
 
     def available(self):
         """
@@ -49,7 +49,7 @@ class Proxy(Service):
 
         if self.host:
             return {
-                'HTTP_PROXY': 'http://{host}:{port}'.format(**self.__dict__),
+                'HTTP_PROXY': self.url_string()
             }
         else:
             return {}

@@ -18,11 +18,11 @@ Proxy service.
 """
 
 from forklift.base import free_port
-from .base import Service, port_open, register, transient_provider
+from .base import port_open, register, transient_provider, URLLens, URLService
 
 
 @register('syslog')
-class Syslog(Service):
+class Syslog(URLService):
     """
     Logging facility for the application.
     """
@@ -31,10 +31,14 @@ class Syslog(Service):
 
     allow_override = ('host', 'port', 'proto')
 
+    proto = URLLens('scheme')
+
     def __init__(self, host=None, port=DEFAULT_PORT, proto='udp'):
-        self.host = host
-        self.port = port
-        self.proto = proto
+        super().__init__('{proto}://{host}:{port}'.format(
+            host=host or '',
+            port=port,
+            proto=proto,
+        ))
 
     def environment(self):
         """
@@ -55,7 +59,7 @@ class Syslog(Service):
         parameters are set.
         """
 
-        if self.host is None:
+        if not self.host:
             return False
 
         if self.proto == 'udp':

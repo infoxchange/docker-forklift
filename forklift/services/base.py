@@ -277,8 +277,19 @@ def replace_part(url, part, value):
             p: getattr(url, p)
             for p in netloc_parts
         }
+
         netloc[part] = value
-        kwargs = {'netloc': '{hostname}:{port}'.format(**netloc)}
+
+        netloc_str = netloc['hostname']
+        if netloc['port']:
+            netloc_str += ':' + str(netloc['port'])
+        if netloc['username'] or netloc['password']:
+            userinfo = netloc['username'] or ''
+            if netloc['password']:
+                userinfo += ':' + netloc['password']
+            netloc_str = userinfo + '@' + netloc_str
+
+        kwargs = {'netloc': netloc_str}
     else:
         kwargs = {part: value}
 
@@ -392,7 +403,7 @@ class URLHostInfoLens(URLMultiValueLens):
         """
 
         port = url.port
-        if port == self.default_port:
+        if port == self.default_port or port is None:
             return url.hostname
         else:
             return ':'.join((url.hostname, str(port)))
@@ -463,7 +474,7 @@ class URLService(Service):
     user = URLLens('username')
     password = URLLens('password')
     host = hostname = URLMultiValueLens('hostname')
-    port = URLMultiValueLens('port')
+    port = URLMultiValueLens('port', default=None)
     path = URLLens('path')
 
 
