@@ -22,10 +22,12 @@ import os.path
 import docker
 import docker.errors
 
-from tests.base import (docker as docker_test,
-                        TestCase,
-                        TestDriver,
-                        TestForklift)
+from tests.base import (
+    requires_docker_image,
+    TestCase,
+    TestDriver,
+    TestForklift,
+)
 
 
 def assertion_driver(func):
@@ -48,7 +50,7 @@ def assertion_forklift_class(func):
     return InnerClass
 
 
-@docker_test
+@requires_docker_image('thatpanda/postgis')
 class TestRm(TestCase):
     """
     Test the --rm flag
@@ -56,10 +58,6 @@ class TestRm(TestCase):
 
     def setUp(self):
         self.client = docker.Client()
-
-        # Make sure that we have the required testing image, or at least error
-        # in a descriptive way
-        self.client.inspect_image('thatpanda/postgis')
 
     def test_create_delete(self):
         """

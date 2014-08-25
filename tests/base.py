@@ -47,8 +47,29 @@ try:
 except (subprocess.CalledProcessError, OSError):
     pass
 
-docker = unittest.skipUnless(  # pylint:disable=invalid-name
+requires_docker = unittest.skipUnless(  # pylint:disable=invalid-name
     DOCKER_AVAILABLE, "Docker is unavailable")
+
+
+def requires_docker_image(image_name):
+    """
+    Mark a test as requiring a Docker image to run.
+    """
+
+    import docker
+    import requests.exceptions
+
+    image_available = False
+    try:
+        docker.Client().inspect_image(image_name)
+        image_available = True
+    except (docker.errors.APIError, requests.exceptions.ConnectionError):
+        pass
+
+    return unittest.skipUnless(
+        image_available,
+        "Docker image {0} is required.".format(image_name)
+    )
 
 
 DOCKER_BASE_IMAGE = 'debian:wheezy'

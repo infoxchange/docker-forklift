@@ -22,7 +22,7 @@ import re
 import subprocess
 
 from tests.base import (
-    docker,
+    requires_docker,
     DOCKER_BASE_IMAGE,
     merge_dicts,
     parse_environment,
@@ -70,7 +70,7 @@ class SSHTestForklift(TestForklift):
     }, TestForklift.drivers)
 
 
-@docker
+@requires_docker
 class SSHTestCase(TestCase):
     """
     Test setting up an SSH daemon via Docker.
