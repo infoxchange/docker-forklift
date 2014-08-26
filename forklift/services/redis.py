@@ -24,7 +24,7 @@ from telnetlib import Telnet
 from .base import (
     register,
     split_host_port,
-    URLNameLens,
+    URLNameDescriptor,
     URLService,
 )
 
@@ -40,7 +40,7 @@ class Redis(URLService):
     """
 
     allow_override = URLService.allow_override + ('db_index',)
-    db_index = URLNameLens()
+    db_index = URLNameDescriptor()
 
     providers = ('localhost', 'container')
 

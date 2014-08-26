@@ -18,8 +18,8 @@ Memcache service.
 """
 
 from .base import (
-    URLHostInfoLens,
-    URLNameLens,
+    URLHostInfoDescriptor,
+    URLNameDescriptor,
     URLService,
     port_open,
     register,
@@ -39,8 +39,8 @@ class Memcache(URLService):
 
     allow_override = URLService.allow_override + ('key_prefix',)
     allow_override_list = URLService.allow_override_list + ('hosts',)
-    key_prefix = URLNameLens()
-    hosts = URLHostInfoLens(default_port=DEFAULT_PORT, joiner=tuple)
+    key_prefix = URLNameDescriptor()
+    hosts = URLHostInfoDescriptor(default_port=DEFAULT_PORT, joiner=tuple)
 
     providers = ('localhost', 'container')
 

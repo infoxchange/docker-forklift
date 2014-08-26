@@ -364,7 +364,7 @@ def replace_hostinfo(url, hostname, port):
     return url
 
 
-class URLLens(object):
+class URLDescriptor(object):
     """
     A descriptor to get or set an URL part for all the URLs of the class.
     """
@@ -410,7 +410,7 @@ class URLLens(object):
         )
 
 
-class URLNameLens(URLLens):
+class URLNameDescriptor(URLDescriptor):
     """
     A descriptor to get or set the URL path without a leading slash,
     commonly used when mapping an alphanumeric namespace (e.g. database names)
@@ -424,7 +424,7 @@ class URLNameLens(URLLens):
         ))
 
 
-class URLMultiValueLens(URLLens):
+class URLMultiValueDescriptor(URLDescriptor):
     """
     A descriptor to get or set part of the URLs to an array of values.
     """
@@ -448,7 +448,7 @@ class URLMultiValueLens(URLLens):
         )
 
 
-class URLHostInfoLens(URLMultiValueLens):
+class URLHostInfoDescriptor(URLMultiValueDescriptor):
     """
     A descriptor to get or set hostinfo pairs (hostname:port), accounting for
     default port.
@@ -528,11 +528,11 @@ class URLService(Service):
             for url in pipe_split(urls)
         )
 
-    user = URLLens('username')
-    password = URLLens('password')
-    host = hostname = URLMultiValueLens('hostname')
-    port = URLMultiValueLens('port', default=None)
-    path = URLLens('path')
+    user = URLDescriptor('username')
+    password = URLDescriptor('password')
+    host = hostname = URLMultiValueDescriptor('hostname')
+    port = URLMultiValueDescriptor('port', default=None)
+    path = URLDescriptor('path')
 
 
 class ProviderNotAvailable(Exception):

@@ -32,7 +32,7 @@ from .base import (cache_directory,
                    pipe_split,
                    replace_part,
                    register,
-                   URLNameLens,
+                   URLNameDescriptor,
                    URLService,
                    transient_provider)
 
@@ -61,7 +61,7 @@ class Elasticsearch(URLService):
 
     DEFAULT_PORT = 9200
 
-    index_name = URLNameLens()
+    index_name = URLNameDescriptor()
 
     TEMPORARY_AVAILABILITY_ERRORS = (CONNECTION_ISSUES_ERROR,
                                      http.client.HTTPException,

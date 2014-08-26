@@ -24,7 +24,7 @@ from .base import (
     register,
     transient_provider,
     try_port,
-    URLLens,
+    URLDescriptor,
     URLService,
 )
 
@@ -41,7 +41,7 @@ class Syslog(URLService):
 
     allow_override = ('host', 'port', 'proto')
 
-    proto = URLLens('scheme')
+    proto = URLDescriptor('scheme')
 
     def __init__(self, host=None, port=DEFAULT_PORT, proto='udp'):
         super().__init__('{proto}://{host}:{port}'.format(
