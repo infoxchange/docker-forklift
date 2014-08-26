@@ -77,6 +77,8 @@ class ServiceTestCase(unittest.TestCase):
         service = self.service_class.provide('fake', transient=True)
         self.assertTrue(service.available())
 
+        service.cleanup()
+
 
 def load_tests(loader, tests, pattern):  # pylint:disable=unused-argument
     """
