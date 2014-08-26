@@ -18,14 +18,12 @@ Memcache service.
 """
 
 from .base import (
-    ensure_container,
     URLHostInfoLens,
     URLNameLens,
     URLService,
     port_open,
     register,
     split_host_port,
-    transient_provider,
 )
 
 
@@ -36,6 +34,8 @@ class Memcache(URLService):
     """
 
     DEFAULT_PORT = 11211
+
+    CONTAINER_IMAGE = 'fedora/memcached'
 
     allow_override = URLService.allow_override + ('key_prefix',)
     allow_override_list = URLService.allow_override_list + ('hosts',)
@@ -96,22 +96,12 @@ class Memcache(URLService):
                    hosts=['localhost:{0}'.format(cls.DEFAULT_PORT)])
 
     @classmethod
-    @transient_provider
-    def container(cls, application_id):
+    def from_container(cls, application_id, container):
         """
         Memcached provided by a container.
         """
 
-        container = ensure_container(
-            image='fedora/memcached',
-            port=cls.DEFAULT_PORT,
-            application_id=application_id,
-        )
-
-        instance = cls(
+        return cls(
             key_prefix=application_id,
             hosts=['localhost:{0}'.format(container.port)],
         )
-        # pylint:disable=attribute-defined-outside-init
-        instance.container_info = container
-        return instance

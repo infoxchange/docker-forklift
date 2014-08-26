@@ -28,7 +28,6 @@ import urllib.request
 from forklift.base import open_root_owned
 from .base import (cache_directory,
                    container_name_for,
-                   ensure_container,
                    ProviderNotAvailable,
                    pipe_split,
                    replace_part,
@@ -55,6 +54,12 @@ class Elasticsearch(URLService):
     """
 
     allow_override = URLService.allow_override + ('index_name',)
+
+    providers = ('localhost', 'container')
+
+    CONTAINER_IMAGE = 'dockerfile/elasticsearch'
+
+    DEFAULT_PORT = 9200
 
     index_name = URLNameLens()
 
@@ -123,7 +128,7 @@ class Elasticsearch(URLService):
         Elasticsearch provided by a container.
         """
 
-        image_name = 'dockerfile/elasticsearch'
+        image_name = cls.CONTAINER_IMAGE
         container_name = container_name_for(image_name, application_id)
         cache_dir = cache_directory(container_name)
 
@@ -143,12 +148,7 @@ class Elasticsearch(URLService):
                 file=config,
             )
 
-        container = ensure_container(
-            image=image_name,
-            port=9200,
-            application_id=application_id,
-            data_dir='/data',
-        )
+        container = cls.ensure_container(application_id, data_dir='/data')
 
         instance = cls(
             index_name=application_id,
@@ -158,5 +158,3 @@ class Elasticsearch(URLService):
         # pylint:disable=attribute-defined-outside-init
         instance.container_info = container
         return instance
-
-    providers = ('localhost', 'container')

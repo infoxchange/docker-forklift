@@ -84,6 +84,14 @@ def pipe_split(value):
         return value
 
 
+def transient_provider(func):
+    """
+    Decorator to mark a provider as transient
+    """
+    func.transient = True
+    return func
+
+
 class Service(object):
     """
     Base class for services required by the application.
@@ -112,6 +120,9 @@ class Service(object):
         """
         return (self.TEMPORARY_AVAILABILITY_ERRORS +
                 self.PERMANENT_AVAILABILITY_ERRORS)
+
+    CONTAINER_IMAGE = None
+    DEFAULT_PORT = None
 
     @classmethod
     def add_arguments(cls, add_argument):
@@ -172,10 +183,10 @@ class Service(object):
         """
         Setup override values on a service
         """
-        overrides = overrides or {}
+        overrides = vars(overrides) if overrides else {}
         allowed_overrides = cls.allow_override + cls.allow_override_list
 
-        for key, value in vars(overrides).items():
+        for key, value in overrides.items():
             if value is not None:
                 if key in allowed_overrides:
                     setattr(service, key, value)
@@ -240,8 +251,9 @@ class Service(object):
         Do any clean up required to undo anything that was done in the provide
         method
         """
+
         # pylint:disable=no-member
-        if not hasattr(self, 'container'):
+        if self.provided_by != 'container':
             LOGGER.debug("Don't know how to clean up %s service provided "
                          "by %s",
                          self.__class__.__name__,
@@ -260,6 +272,43 @@ class Service(object):
                          self.__class__.__name__)
 
         return True
+
+    @classmethod
+    def ensure_container(cls, application_id, **kwargs):
+        """
+        Ensure a container for this service is running.
+        """
+
+        return _ensure_container(
+            image=cls.CONTAINER_IMAGE,
+            port=cls.DEFAULT_PORT,
+            application_id=application_id,
+            **kwargs
+        )
+
+    @classmethod
+    def from_container(cls, application_id, container):
+        """
+        The service instance connecting to the specified Docker container.
+        """
+
+        raise NotImplementedError("Please override from_container.")
+
+    @classmethod
+    @transient_provider
+    def container(cls, application_id):
+        """
+        A generic container provider for a service. Needs to be specified in
+        'providers' to activate.
+        """
+
+        container = cls.ensure_container(application_id)
+
+        instance = cls.from_container(application_id, container)
+
+        # pylint:disable=attribute-defined-outside-init
+        instance.container_info = container
+        return instance
 
 
 def replace_part(url, part, value):
@@ -549,11 +598,11 @@ def container_name_for(image, application_id):
     return image.replace('/', '_') + '__' + application_id
 
 
-def ensure_container(image,
-                     port,
-                     application_id,
-                     data_dir=None,
-                     **kwargs):
+def _ensure_container(image,
+                      port,
+                      application_id,
+                      data_dir=None,
+                      **kwargs):
     """
     Ensure that a container for an application is running and wait for the port
     to be connectable.
@@ -738,11 +787,3 @@ def log_service_settings(logger, service, *attrs):
                 val = val()
 
             logger.debug("%s %s: %s", service.__class__.__name__, attr, val)
-
-
-def transient_provider(func):
-    """
-    Decorator to mark a provider as transient
-    """
-    func.transient = True
-    return func

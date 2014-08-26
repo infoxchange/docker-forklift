@@ -22,10 +22,8 @@ import socket
 from telnetlib import Telnet
 
 from .base import (
-    ensure_container,
     register,
     split_host_port,
-    transient_provider,
     URLNameLens,
     URLService,
 )
@@ -45,6 +43,8 @@ class Redis(URLService):
     db_index = URLNameLens()
 
     providers = ('localhost', 'container')
+
+    CONTAINER_IMAGE = 'dockerfile/redis'
 
     DEFAULT_PORT = 6379
 
@@ -94,22 +94,11 @@ class Redis(URLService):
         return cls(host='localhost:{port}'.format(port=cls.DEFAULT_PORT))
 
     @classmethod
-    @transient_provider
-    def container(cls, application_id):
+    def from_container(cls, application_id, container):
         """
-        Redis provided by a container
+        Redis provided by a container.
         """
 
-        container = ensure_container(
-            image='dockerfile/redis',
-            port=cls.DEFAULT_PORT,
-            application_id=application_id,
-        )
-
-        instance = cls(
+        return cls(
             host='localhost:{port}'.format(port=container.port),
         )
-
-        # pylint:disable=attribute-defined-outside-init
-        instance.container_info = container
-        return instance

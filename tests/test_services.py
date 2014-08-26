@@ -212,47 +212,6 @@ class EmailTestCase(unittest.TestCase):
                 ], log)
 
 
-class ServicesAPITestCase(unittest.TestCase):
-    """
-    Test all services match the API
-    """
-
-    def test_services_api_conformance(self):
-        """
-        Test services have the correct API
-        """
-        for cls in forklift.services.register.values():
-
-            print(cls)
-
-            # assert we have at least one provider
-            self.assertGreaterEqual(len(cls.providers), 1)
-
-            # assert those providers exist on the class
-            for provider in cls.providers:
-                assert hasattr(cls, provider)
-
-            # assert can build a provider
-            service = getattr(cls, cls.providers[0])('test-app')
-
-            # assert we can set the host
-            #
-            # Only the Docker driver uses the host property, and it is
-            # currently optional. However this test is useful because the
-            # property is useful. If it turns out there are services for
-            # which host is not useful, then this test should be changed :)
-            assert hasattr(service, 'host')
-            service.host = 'badger'
-
-            assert hasattr(service, 'environment')
-            assert hasattr(service, 'available')
-
-            # Test all attributes in allow_override exist
-            for attr in service.allow_override:
-                value = getattr(service, attr)
-                setattr(service, attr, value)
-
-
 class BaseTestCase(unittest.TestCase):
     """
     Test base services functions.

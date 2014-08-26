@@ -24,8 +24,7 @@ import string
 import subprocess
 
 from forklift.base import DEVNULL
-from .base import (ensure_container,
-                   ProviderNotAvailable,
+from .base import (ProviderNotAvailable,
                    URLNameLens,
                    URLService,
                    register,
@@ -166,10 +165,8 @@ class PostgreSQL(URLService):
             user[0] = ('zero', 'one', 'two', 'three', 'four', 'five', 'six',
                        'seven', 'eight', 'nine')[int(user[0])]
 
-        container = ensure_container(
-            image=cls.CONTAINER_IMAGE,
-            port=cls.DEFAULT_PORT,
-            application_id=application_id,
+        container = cls.ensure_container(
+            application_id,
             data_dir='/data',
             environment={
                 'USER': user,

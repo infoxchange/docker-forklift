@@ -51,23 +51,28 @@ requires_docker = unittest.skipUnless(  # pylint:disable=invalid-name
     DOCKER_AVAILABLE, "Docker is unavailable")
 
 
-def requires_docker_image(image_name):
+def docker_image_available(image_name):
     """
-    Mark a test as requiring a Docker image to run.
+    Check whether a Docker image is available.
     """
 
     import docker
     import requests.exceptions
 
-    image_available = False
     try:
         docker.Client().inspect_image(image_name)
-        image_available = True
+        return True
     except (docker.errors.APIError, requests.exceptions.ConnectionError):
-        pass
+        return False
+
+
+def requires_docker_image(image_name):
+    """
+    Mark a test as requiring a Docker image to run.
+    """
 
     return unittest.skipUnless(
-        image_available,
+        docker_image_available(image_name),
         "Docker image {0} is required.".format(image_name)
     )
 
