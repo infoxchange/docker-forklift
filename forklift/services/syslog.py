@@ -14,11 +14,19 @@
 # limitations under the License.
 
 """
-Proxy service.
+Syslog service.
 """
 
+import socket
+
 from forklift.base import free_port
-from .base import port_open, register, transient_provider, URLLens, URLService
+from .base import (
+    register,
+    transient_provider,
+    try_port,
+    URLLens,
+    URLService,
+)
 
 
 @register('syslog')
@@ -28,6 +36,8 @@ class Syslog(URLService):
     """
 
     DEFAULT_PORT = 514
+
+    TEMPORARY_AVAILABILITY_ERRORS = (socket.error,)
 
     allow_override = ('host', 'port', 'proto')
 
@@ -51,7 +61,7 @@ class Syslog(URLService):
             'SYSLOG_PROTO': self.proto,
         }
 
-    def available(self):
+    def check_available(self):
         """
         Check whether syslog is available.
 
@@ -65,7 +75,7 @@ class Syslog(URLService):
         if self.proto == 'udp':
             return True
         else:
-            return port_open(self.host, self.port)
+            return try_port(self.host, self.port)
 
     # pylint:disable=unused-argument
     @classmethod
