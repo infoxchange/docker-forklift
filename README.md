@@ -14,23 +14,18 @@ original command, so that one can run arbitary commands inside.
 Installation
 ------------
 
-Make sure that you have python headers installed
-(`sudo apt-get install python3-dev` on Debian).
+Forklift requires Python 3. Use the corresponding `pip` to install from PyPI,
+for example, `pip-3.2` on Debian and `pip3` on Ubuntu. You will also need
+Python header files installed, they are typically found in `python3-dev` or
+`python3-devel` package.
 
-Install the package from pip:
+Install the package system-wide:
 
     sudo pip install docker-forklift
-
-(Note: you may need to use ```sudo pip-3.2 install docker-forklift```)
 
 Or in a virtualenv:
 
     pip install docker-forklift
-
-Warning: Forklift requires Python 3, and you should use the corresponding `pip`
-to install, for example, `pip-3.2` on Debian and `pip3` on Ubuntu
-(`sudo apt-get install python3-pip`). If unsure, check that `pip --version`
-reports being `python 3`.
 
 Running Forklift
 ----------------
