@@ -63,10 +63,10 @@ class PostgreSQL(URLService):
                  user=None,
                  password=None):
         super().__init__((
-            '{scheme}://{user}:{password}@{host}:{port}/{name}'.format(
+            '{scheme}://{user}{password}@{host}:{port}/{name}'.format(
                 scheme=self.URL_SCHEME,
                 user=user,
-                password=password,
+                password=':' + password if password else '',
                 host=host,
                 port=port,
                 name=name,
@@ -79,7 +79,7 @@ class PostgreSQL(URLService):
         """
 
         env_name = 'DB_{0}_URL'.format(self.DATABASE_NAME)
-        return {env_name: self.urls[0]}
+        return {env_name: self.urls[0].geturl()}
 
     def check_available(self):
         """
