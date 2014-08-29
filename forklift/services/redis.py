@@ -23,7 +23,6 @@ from telnetlib import Telnet
 
 from .base import (
     register,
-    split_host_port,
     URLNameDescriptor,
     URLService,
 )
@@ -73,7 +72,7 @@ class Redis(URLService):
         """
 
         # pylint:disable=invalid-name
-        nc = Telnet(*split_host_port(self.host, self.DEFAULT_PORT))
+        nc = Telnet(self.host, self.port)
 
         try:
             nc.write(b'PING')
