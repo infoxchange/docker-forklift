@@ -166,6 +166,7 @@ class PostgreSQL(Service):
             image=cls.CONTAINER_IMAGE,
             port=cls.DEFAULT_PORT,
             application_id=application_id,
+            # FIXME: this is broken at the moment in the paintedfox container
             # data_dir='/data',
             environment={
                 'DB': db_name,
