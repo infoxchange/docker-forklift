@@ -102,7 +102,7 @@ class Redis(Service):
         )
 
         instance = cls(
-            host='localhost:{port}'.format(port=container.port),
+            host='{host}:{port}'.format(**container),
         )
 
         # pylint:disable=attribute-defined-outside-init

@@ -20,7 +20,6 @@ PostgreSQL database service.
 import logging
 import os
 import re
-import string
 import subprocess
 
 from forklift.base import DEVNULL
@@ -161,31 +160,26 @@ class PostgreSQL(Service):
         PostgreSQL provided by a container.
         """
 
-        user = re.sub('[^a-z0-9]', '_', application_id)
-
-        # Postgres DB names can't start with a digit
-        if user[0] in string.digits:
-            user[0] = ('zero', 'one', 'two', 'three', 'four', 'five', 'six',
-                       'seven', 'eight', 'nine')[int(user[0])]
+        db_name = re.sub(r'[^a-zA-Z0-9_]', '_', application_id)
 
         container = ensure_container(
             image=cls.CONTAINER_IMAGE,
             port=cls.DEFAULT_PORT,
             application_id=application_id,
-            data_dir='/data',
+            # FIXME: this is broken at the moment in the paintedfox container
+            # data_dir='/data',
             environment={
-                'USER': user,
-                'DB': user,
-                'PASS': user,
+                'DB': db_name,
+                'PASS': 'forklift',
             }
         )
 
         instance = cls(
-            host='localhost',
-            name=user,
-            user=user,
-            password=user,
+            host=container.host,
             port=container.port,
+            name=db_name,
+            user='super',
+            password='forklift',
         )
         instance.wait_until_available()
         # pylint:disable=attribute-defined-outside-init
