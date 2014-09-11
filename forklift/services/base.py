@@ -303,7 +303,8 @@ class ContainerRefusingConnection(ProviderNotAvailable):
         )
 
 
-ContainerInfo = namedtuple('ContainerInfo', ['port',
+ContainerInfo = namedtuple('ContainerInfo', ['host',
+                                             'port',
                                              'data_dir',
                                              'name',
                                              'new'])
@@ -385,6 +386,8 @@ def ensure_container(image,
                              data_dir,
                              cached_dir)
 
+        host = docker_client.inspect_container(
+            container_name)['NetworkSettings']['IPAddress']
         host_port = docker_client.port(container_name, port)[0]['HostPort']
 
         try:
@@ -396,7 +399,8 @@ def ensure_container(image,
                 destroy_container(container_name)
             raise
 
-        return ContainerInfo(port=host_port,
+        return ContainerInfo(host=host,
+                             port=port,
                              data_dir=cached_dir,
                              name=container_name,
                              new=created)
