@@ -22,6 +22,7 @@ import logging
 import os
 import socket
 import sys
+import subprocess
 
 import docker
 
@@ -463,7 +464,11 @@ def destroy_container(container_name):
     docker_client = docker.Client()
     docker_client.stop(container_name)
     docker_client.remove_container(container_name)
-    rm_tree_root_owned(cache_dir)
+
+    try:
+        rm_tree_root_owned(cache_dir)
+    except subprocess.CalledProcessError:
+        pass
 
 
 def _wait_for_port(image, port, retries=30):
