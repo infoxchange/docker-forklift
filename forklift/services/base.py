@@ -341,6 +341,7 @@ def replace_part(url, **kwargs):
             netloc[part] = value
 
             netloc_str = netloc['hostname']
+
             if netloc['port']:
                 netloc_str += ':' + str(netloc['port'])
             if netloc['username'] or netloc['password']:
