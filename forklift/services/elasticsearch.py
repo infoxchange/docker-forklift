@@ -82,7 +82,7 @@ class Elasticsearch(URLService):
         """
 
         hosts = '|'.join(
-            replace_part(url, 'path', '').geturl()
+            replace_part(url, path='').geturl()
             for url in self.urls
         )
         index_name = self.urls[0].path[1:]
@@ -101,7 +101,7 @@ class Elasticsearch(URLService):
             return False
 
         for url in self.urls:
-            url = replace_part(url, 'path', '')
+            url = replace_part(url, path='')
             es_response = urllib.request.urlopen(url.geturl())
             es_status = json.loads(es_response.read().decode())
             if es_status['status'] != 200:

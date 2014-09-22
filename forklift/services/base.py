@@ -320,48 +320,41 @@ class Service(object):
         return instance
 
 
-def replace_part(url, part, value):
+def replace_part(url, **kwargs):
     """
     Replace a part of the URL with a new value.
 
-    part can be any property of urllib.parse.ParseResult.
+    Keyword arguments can be any properties of urllib.parse.ParseResult.
     """
 
     netloc_parts = ('username', 'password', 'hostname', 'port')
 
-    if part in netloc_parts:
-        # Reassemble netloc
-        netloc = {
-            p: getattr(url, p)
-            for p in netloc_parts
-        }
+    for part, value in kwargs.items():
+        if part in netloc_parts:
+            # Reassemble netloc
+            netloc = {
+                p: getattr(url, p)
+                for p in netloc_parts
+            }
 
-        netloc[part] = value
+            netloc[part] = value
 
-        netloc_str = netloc['hostname']
-        if netloc['port']:
-            netloc_str += ':' + str(netloc['port'])
-        if netloc['username'] or netloc['password']:
-            userinfo = netloc['username'] or ''
-            if netloc['password']:
-                userinfo += ':' + netloc['password']
-            netloc_str = userinfo + '@' + netloc_str
+            netloc_str = netloc['hostname']
+            if netloc['port']:
+                netloc_str += ':' + str(netloc['port'])
+            if netloc['username'] or netloc['password']:
+                userinfo = netloc['username'] or ''
+                if netloc['password']:
+                    userinfo += ':' + netloc['password']
+                netloc_str = userinfo + '@' + netloc_str
 
-        kwargs = {'netloc': netloc_str}
-    else:
-        kwargs = {part: value}
+            kwargs = {'netloc': netloc_str}
+        else:
+            kwargs = {part: value}
 
-    # pylint:disable=protected-access
-    return url._replace(**kwargs)
+        # pylint:disable=protected-access
+        url = url._replace(**kwargs)
 
-
-def replace_hostinfo(url, hostname, port):
-    """
-    Replace host and port in the URL.
-    """
-
-    url = replace_part(url, 'hostname', hostname)
-    url = replace_part(url, 'port', port)
     return url
 
 
@@ -383,7 +376,7 @@ class URLDescriptor(object):
 
         if isinstance(part, str):
             self.getter = attrgetter(part)
-            self.setter = lambda url, value: replace_part(url, part, value)
+            self.setter = lambda url, value: replace_part(url, **{part: value})
         else:
             (self.getter, self.setter) = part
 
@@ -424,7 +417,7 @@ class URLNameDescriptor(URLDescriptor):
     def __init__(self):
         super().__init__((
             lambda url: url.path.lstrip('/'),
-            lambda url, value: replace_part(url, 'path', '/' + value),
+            lambda url, value: replace_part(url, path='/' + value),
         ))
 
 
@@ -474,8 +467,8 @@ class URLHostInfoDescriptor(URLMultiValueDescriptor):
         Set the hostname:port pair of the URL.
         """
 
-        host, port = split_host_port(value, self.default_port)
-        return replace_hostinfo(url, host, port)
+        hostname, port = split_host_port(value, self.default_port)
+        return replace_part(url, hostname=hostname, port=port)
 
     def __init__(self, default_port, joiner=lambda xs: next(iter(xs))):
         self.default_port = default_port
