@@ -20,6 +20,7 @@ Services that can be provided to running applications - base definitions.
 import logging
 import os
 import socket
+import subprocess
 import sys
 import urllib.parse
 
@@ -575,7 +576,8 @@ class ContainerRefusingConnection(ProviderNotAvailable):
         )
 
 
-ContainerInfo = namedtuple('ContainerInfo', ['port',
+ContainerInfo = namedtuple('ContainerInfo', ['host',
+                                             'port',
                                              'data_dir',
                                              'name',
                                              'new'])
@@ -657,6 +659,8 @@ def _ensure_container(image,
                                  data_dir,
                                  cached_dir)
 
+            host = docker_client.inspect_container(
+                container_name)['NetworkSettings']['IPAddress']
             host_port = docker_client.port(container_name, port)[0]['HostPort']
 
             try:
@@ -668,7 +672,8 @@ def _ensure_container(image,
                     destroy_container(container_name)
                 raise
 
-            return ContainerInfo(port=host_port,
+            return ContainerInfo(host=host,
+                                 port=port,
                                  data_dir=cached_dir,
                                  name=container_name,
                                  new=created)
@@ -731,7 +736,11 @@ def destroy_container(container_name):
     with docker.Client() as docker_client:
         docker_client.stop(container_name)
         docker_client.remove_container(container_name)
-    rm_tree_root_owned(cache_dir)
+
+    try:
+        rm_tree_root_owned(cache_dir)
+    except subprocess.CalledProcessError:
+        pass
 
 
 def _wait_for_port(image, port, retries=30):
