@@ -1,4 +1,4 @@
-docker-py>=0.3.2
+docker-py>=0.4.0
 psutil
 pyxdg
 pyyaml

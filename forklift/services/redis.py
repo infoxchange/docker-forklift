@@ -21,36 +21,40 @@ import logging
 import socket
 from telnetlib import Telnet
 
-from .base import (Service,
-                   ensure_container,
-                   register,
-                   split_host_port,
-                   transient_provider)
+from .base import (
+    register,
+    URLNameDescriptor,
+    URLService,
+)
 
 LOGGER = logging.getLogger(__name__)
 
 
 @register('redis')
-class Redis(Service):
+class Redis(URLService):
     """
     A Redis service
 
     This is a single Redis server.
     """
 
-    allow_override = ('host', 'db_index')
+    allow_override = URLService.allow_override + ('db_index',)
+    db_index = URLNameDescriptor()
+
     providers = ('localhost', 'container')
+
+    CONTAINER_IMAGE = 'dockerfile/redis'
 
     DEFAULT_PORT = 6379
 
     TEMPORARY_AVAILABILITY_ERRORS = (socket.error,)
 
-    def __init__(self,
-                 host=None,
-                 db_index=0):
+    def __init__(self, host, db_index=0):
         # FIXME: we don't support multiple redis servers yet
-        self.host = host
-        self.db_index = db_index
+        super().__init__('redis://{host}/{db_index}'.format(
+            host=host,
+            db_index=db_index,
+        ))
 
     def environment(self):
         """
@@ -68,7 +72,7 @@ class Redis(Service):
         """
 
         # pylint:disable=invalid-name
-        nc = Telnet(*split_host_port(self.host, self.DEFAULT_PORT))
+        nc = Telnet(self.host, self.port)
 
         try:
             nc.write(b'PING')
@@ -89,22 +93,11 @@ class Redis(Service):
         return cls(host='localhost:{port}'.format(port=cls.DEFAULT_PORT))
 
     @classmethod
-    @transient_provider
-    def container(cls, application_id):
+    def from_container(cls, application_id, container):
         """
-        Redis provided by a container
+        Redis provided by a container.
         """
 
-        container = ensure_container(
-            image='dockerfile/redis',
-            port=cls.DEFAULT_PORT,
-            application_id=application_id,
-        )
-
-        instance = cls(
+        return cls(
             host='{host}:{port}'.format(**container),
         )
-
-        # pylint:disable=attribute-defined-outside-init
-        instance.container_info = container
-        return instance

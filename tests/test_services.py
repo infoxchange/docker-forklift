@@ -47,34 +47,32 @@ class ElasticsearchTestCase(unittest.TestCase):
             'index',
             ('http://alpha:9200|http://beta:9200',))
 
-        self.assertEqual(service.urls, [
-            urlparse('http://alpha:9200'),
-            urlparse('http://beta:9200'),
-        ])
-        self.assertEqual(
-            service.environment()['ELASTICSEARCH_URLS'],
-            'http://alpha:9200|http://beta:9200'
-        )
-        self.assertEqual(service.host, 'alpha|beta')
+        self.assertEqual(service.urls, (
+            urlparse('http://alpha:9200/index'),
+            urlparse('http://beta:9200/index'),
+        ))
+        self.assertEqual(service.environment(), {
+            'ELASTICSEARCH_URLS': 'http://alpha:9200|http://beta:9200',
+            'ELASTICSEARCH_INDEX_NAME': 'index',
+        })
 
-        service.host = 'elsewhere'
+        service.host = 'other'
 
-        self.assertEqual(service.urls, [
-            urlparse('http://elsewhere:9200'),
-            urlparse('http://elsewhere:9200'),
-        ])
-        self.assertEqual(
-            service.environment()['ELASTICSEARCH_URLS'],
-            'http://elsewhere:9200|http://elsewhere:9200'
-        )
+        self.assertEqual(service.urls, (
+            urlparse('http://other:9200/index'),
+        ))
+        self.assertEqual(service.environment(), {
+            'ELASTICSEARCH_URLS': 'http://other:9200',
+            'ELASTICSEARCH_INDEX_NAME': 'index',
+        })
 
         service = forklift.services.Elasticsearch(
             'index',
             ('http://localhost:9200',))
 
-        self.assertEqual(service.urls, [
-            urlparse('http://localhost:9200'),
-        ])
+        self.assertEqual(service.urls, (
+            urlparse('http://localhost:9200/index'),
+        ))
         self.assertEqual(service.host, 'localhost')
 
         service = forklift.services.Elasticsearch(
@@ -82,10 +80,14 @@ class ElasticsearchTestCase(unittest.TestCase):
             ('http://alpha:9200',
              'http://beta:9200'))
 
-        self.assertEqual(service.urls, [
-            urlparse('http://alpha:9200'),
-            urlparse('http://beta:9200'),
-        ])
+        self.assertEqual(service.urls, (
+            urlparse('http://alpha:9200/index'),
+            urlparse('http://beta:9200/index'),
+        ))
+        self.assertEqual(service.environment(), {
+            'ELASTICSEARCH_URLS': 'http://alpha:9200|http://beta:9200',
+            'ELASTICSEARCH_INDEX_NAME': 'index',
+        })
 
 
 class MemcacheTestCase(unittest.TestCase):
@@ -102,29 +104,24 @@ class MemcacheTestCase(unittest.TestCase):
             'index',
             ['alpha', 'beta:11222'])
 
-        self.assertEqual(service.hosts, [
+        self.assertEqual(service.hosts, (
             'alpha',
             'beta:11222',
-        ])
-        self.assertEqual(service.host, 'alpha|beta')
+        ))
 
-        service.host = 'elsewhere'
+        service.host = 'other'
 
-        self.assertEqual(service.hosts, [
-            'elsewhere:11211',
-        ])
+        self.assertEqual(service.hosts, (
+            'other',
+        ))
 
-    def test_set_only_host(self):
-        """
-        Test that when setting hosts, the ports are kept
-        """
         service = forklift.services.Memcache(
             'index',
             ['localhost', 'localhost:22111', 'alpha', 'beta:11222'])
         service.host = '2.2.2.2|3.3.3.3|gamma|delta'
-        self.assertEqual(service.hosts, [
-            '2.2.2.2:11211', '3.3.3.3:22111', 'gamma:11211', 'delta:11222'
-        ])
+        self.assertEqual(service.hosts, (
+            '2.2.2.2', '3.3.3.3', 'gamma', 'delta'
+        ))
 
 
 class SyslogTestCase(unittest.TestCase):
@@ -210,42 +207,6 @@ class EmailTestCase(unittest.TestCase):
                     'Email message',
                     '------------ END MESSAGE ------------',
                 ], log)
-
-
-class ServicesAPITestCase(unittest.TestCase):
-    """
-    Test all services match the API
-    """
-
-    def test_services_api_conformance(self):
-        """
-        Test services have the correct API
-        """
-        for cls in forklift.services.register.values():
-
-            print(cls)
-
-            # assert we have at least one provider
-            self.assertGreaterEqual(len(cls.providers), 1)
-
-            # assert those providers exist on the class
-            for provider in cls.providers:
-                assert hasattr(cls, provider)
-
-            # assert can build a provider
-            service = getattr(cls, cls.providers[0])('test-app')
-
-            # assert we can set the host
-            #
-            # Only the Docker driver uses the host property, and it is
-            # currently optional. However this test is useful because the
-            # property is useful. If it turns out there are services for
-            # which host is not useful, then this test should be changed :)
-            assert hasattr(service, 'host')
-            service.host = 'badger'
-
-            assert hasattr(service, 'environment')
-            assert hasattr(service, 'available')
 
 
 class BaseTestCase(unittest.TestCase):

@@ -26,7 +26,7 @@ import yaml
 import forklift
 from forklift.drivers import ip_address
 from tests.base import (
-    docker,
+    requires_docker,
     parse_environment,
     redirect_stream,
     DOCKER_BASE_IMAGE,
@@ -116,7 +116,7 @@ class DirectCommandsTestCase(CommandsMixin, TestCase):
     default_driver = 'direct'
 
 
-@docker
+@requires_docker
 class DockerCommandsTestCase(CommandsMixin, TestCase):
     """
     Test running commands via Docker.
@@ -287,7 +287,7 @@ class DirectEnvironmentTestCase(CaptureEnvironmentMixin, TestCase):
     default_driver = 'direct'
 
 
-@docker
+@requires_docker
 class DockerEnvironmentTestCase(CaptureEnvironmentMixin, TestCase):
     """
     Test environment passed to the commands using Docker.

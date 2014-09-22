@@ -22,19 +22,18 @@ import http.client
 import logging
 import os
 import socket
+import urllib.parse
 import urllib.request
-
-from os.path import join
 
 from forklift.base import open_root_owned
 from .base import (cache_directory,
                    container_name_for,
-                   ensure_container,
-                   log_service_settings,
                    ProviderNotAvailable,
                    pipe_split,
+                   replace_part,
                    register,
-                   Service,
+                   URLNameDescriptor,
+                   URLService,
                    transient_provider)
 
 LOGGER = logging.getLogger(__name__)
@@ -49,13 +48,20 @@ except NameError:
 
 
 @register('elasticsearch')
-class Elasticsearch(Service):
+class Elasticsearch(URLService):
     """
     Elasticsearch service for the application.
     """
 
-    allow_override = ('index_name', 'host')
-    allow_override_list = ('urls',)
+    allow_override = URLService.allow_override + ('index_name',)
+
+    providers = ('localhost', 'container')
+
+    CONTAINER_IMAGE = 'dockerfile/elasticsearch'
+
+    DEFAULT_PORT = 9200
+
+    index_name = URLNameDescriptor()
 
     TEMPORARY_AVAILABILITY_ERRORS = (CONNECTION_ISSUES_ERROR,
                                      http.client.HTTPException,
@@ -65,70 +71,26 @@ class Elasticsearch(Service):
     PERMANENT_AVAILABILITY_ERRORS = (urllib.request.URLError,)
 
     def __init__(self, index_name, urls):
-        self.index_name = index_name
-        self._url_array = []
-        self.urls = urls
-
-        log_service_settings(
-            LOGGER, self,
-            'index_name', 'url_string'
-        )
+        super().__init__(tuple(
+            urllib.parse.urljoin(url, index_name)
+            for url in pipe_split(urls)
+        ))
 
     def environment(self):
         """
         The environment to access Elasticsearch.
         """
 
-        return {
-            'ELASTICSEARCH_INDEX_NAME': self.index_name,
-            'ELASTICSEARCH_URLS': self.url_string(),
-        }
-
-    def url_string(self):
-        """
-        All URLs joined as a string.
-        """
-        return '|'.join(url.geturl() for url in self.urls)
-
-    @property
-    def urls(self):
-        """
-        The (pipe separated) URLs to access Elasticsearch at.
-        """
-
-        return self._url_array
-
-    @urls.setter
-    def urls(self, urls):
-        """
-        Set the URLs to access Elasticsearch at.
-        """
-
-        self._url_array = [
-            urllib.parse.urlparse(url) if isinstance(url, str) else url
-            for url in pipe_split(urls)
-        ]
-
-    @property
-    def host(self):
-        """
-        The (pipe separated) hosts for the Elasticsearch service.
-        """
-
-        return '|'.join(url.hostname for url in self._url_array)
-
-    @host.setter
-    def host(self, host):
-        """
-        Set the host to access Elasticsearch at.
-        """
-
-        self.urls = [
-            # pylint:disable=protected-access
-            url._replace(
-                netloc='{host}:{port}'.format(host=host, port=url.port))
+        hosts = '|'.join(
+            replace_part(url, path='').geturl()
             for url in self.urls
-        ]
+        )
+        index_name = self.urls[0].path[1:]
+
+        return {
+            'ELASTICSEARCH_INDEX_NAME': index_name,
+            'ELASTICSEARCH_URLS': hosts,
+        }
 
     def check_available(self):
         """
@@ -139,6 +101,7 @@ class Elasticsearch(Service):
             return False
 
         for url in self.urls:
+            url = replace_part(url, path='')
             es_response = urllib.request.urlopen(url.geturl())
             es_status = json.loads(es_response.read().decode())
             if es_status['status'] != 200:
@@ -166,7 +129,7 @@ class Elasticsearch(Service):
         Elasticsearch provided by a container.
         """
 
-        image_name = 'dockerfile/elasticsearch'
+        image_name = cls.CONTAINER_IMAGE
         container_name = container_name_for(image_name, application_id)
         cache_dir = cache_directory(container_name)
 
@@ -174,7 +137,7 @@ class Elasticsearch(Service):
             LOGGER.debug("Creating cache directory '%s'", cache_dir)
             os.makedirs(cache_dir)
 
-        config_path = join(cache_dir, 'elasticsearch.yml')
+        config_path = os.path.join(cache_dir, 'elasticsearch.yml')
         LOGGER.debug("Writing ElasticSearch config to '%s'", config_path)
         with open_root_owned(config_path, 'w') as config:
             print(
@@ -186,12 +149,7 @@ class Elasticsearch(Service):
                 file=config,
             )
 
-        container = ensure_container(
-            image=image_name,
-            port=9200,
-            application_id=application_id,
-            data_dir='/data',
-        )
+        container = cls.ensure_container(application_id, data_dir='/data')
 
         instance = cls(
             index_name=application_id,
@@ -201,5 +159,3 @@ class Elasticsearch(Service):
         # pylint:disable=attribute-defined-outside-init
         instance.container_info = container
         return instance
-
-    providers = ('localhost', 'container')

@@ -17,36 +17,48 @@
 Memcache service.
 """
 
-from itertools import chain, repeat
-
 from .base import (
-    ensure_container,
-    Service,
+    URLHostInfoDescriptor,
+    URLNameDescriptor,
+    URLService,
     port_open,
     register,
     split_host_port,
-    transient_provider,
 )
 
 
 @register('memcache')
-class Memcache(Service):
+class Memcache(URLService):
     """
     Memcache service for the application.
     """
 
-    allow_override = ('key_prefix', 'host')
-    allow_override_list = ('hosts',)
-    providers = ('localhost', 'container')
-
     DEFAULT_PORT = 11211
+
+    CONTAINER_IMAGE = 'fedora/memcached'
+
+    allow_override = URLService.allow_override + ('key_prefix',)
+    allow_override_list = URLService.allow_override_list + ('hosts',)
+    key_prefix = URLNameDescriptor()
+    hosts = URLHostInfoDescriptor(default_port=DEFAULT_PORT, joiner=tuple)
+
+    providers = ('localhost', 'container')
 
     def __init__(self,
                  key_prefix='',
                  hosts=None):
 
-        self.key_prefix = key_prefix
-        self.hosts = hosts or []
+        super().__init__(
+            'memcache://{host}:{port}/{key_prefix}'.format(
+                host=host,
+                port=port,
+                key_prefix=key_prefix,
+            )
+            for host, port in (
+                split_host_port(h, self.DEFAULT_PORT)
+                for h in hosts
+            )
+        )
 
     def environment(self):
         """
@@ -74,34 +86,6 @@ class Memcache(Service):
 
         return False
 
-    @property
-    def host(self):
-        """
-        The (pipe separated) hosts for the Memcache service.
-        """
-
-        return '|'.join(
-            split_host_port(host, self.DEFAULT_PORT)[0]
-            for host in self.hosts
-        )
-
-    @host.setter
-    def host(self, host):
-        """
-        Set the host to access Memcache at.
-        """
-        ports = chain(
-            (
-                split_host_port(h, self.DEFAULT_PORT)[1]
-                for h in self.hosts
-            ),
-            repeat(self.DEFAULT_PORT),
-        )
-        self.hosts = [
-            '{0}:{1}'.format(h, p)
-            for h, p in zip(host.split('|'), ports)
-        ]
-
     @classmethod
     def localhost(cls, application_id):
         """
@@ -112,22 +96,12 @@ class Memcache(Service):
                    hosts=['localhost:{0}'.format(cls.DEFAULT_PORT)])
 
     @classmethod
-    @transient_provider
-    def container(cls, application_id):
+    def from_container(cls, application_id, container):
         """
         Memcached provided by a container.
         """
 
-        container = ensure_container(
-            image='fedora/memcached',
-            port=cls.DEFAULT_PORT,
-            application_id=application_id,
-        )
-
-        instance = cls(
+        return cls(
             key_prefix=application_id,
             hosts=['{host}:{port}'.format(**container)],
         )
-        # pylint:disable=attribute-defined-outside-init
-        instance.container_info = container
-        return instance

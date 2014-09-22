@@ -17,12 +17,15 @@
 Services that can be provided to running applications - base definitions.
 """
 
-from collections import namedtuple
 import logging
 import os
 import socket
-import sys
 import subprocess
+import sys
+import urllib.parse
+
+from collections import namedtuple
+from operator import attrgetter
 
 import docker
 
@@ -77,10 +80,26 @@ def pipe_split(value):
     Split a pipe-separated string if it's the only value in an array.
     """
 
-    if len(value) == 1 and '|' in value[0]:
+    if isinstance(value, str):
+        value = (value,)
+
+    try:
+        value = tuple(value)
+    except TypeError:
+        value = (value,)
+
+    if len(value) == 1 and isinstance(value[0], str) and '|' in value[0]:
         return value[0].split('|')
     else:
         return value
+
+
+def transient_provider(func):
+    """
+    Decorator to mark a provider as transient
+    """
+    func.transient = True
+    return func
 
 
 class Service(object):
@@ -111,6 +130,9 @@ class Service(object):
         """
         return (self.TEMPORARY_AVAILABILITY_ERRORS +
                 self.PERMANENT_AVAILABILITY_ERRORS)
+
+    CONTAINER_IMAGE = None
+    DEFAULT_PORT = None
 
     @classmethod
     def add_arguments(cls, add_argument):
@@ -171,10 +193,10 @@ class Service(object):
         """
         Setup override values on a service
         """
-        overrides = overrides or {}
+        overrides = vars(overrides) if overrides else {}
         allowed_overrides = cls.allow_override + cls.allow_override_list
 
-        for key, value in vars(overrides).items():
+        for key, value in overrides.items():
             if value is not None:
                 if key in allowed_overrides:
                     setattr(service, key, value)
@@ -239,8 +261,9 @@ class Service(object):
         Do any clean up required to undo anything that was done in the provide
         method
         """
+
         # pylint:disable=no-member
-        if not hasattr(self, 'container'):
+        if self.provided_by != 'container':
             LOGGER.debug("Don't know how to clean up %s service provided "
                          "by %s",
                          self.__class__.__name__,
@@ -259,6 +282,256 @@ class Service(object):
                          self.__class__.__name__)
 
         return True
+
+    @classmethod
+    def ensure_container(cls, application_id, **kwargs):
+        """
+        Ensure a container for this service is running.
+        """
+
+        return _ensure_container(
+            image=cls.CONTAINER_IMAGE,
+            port=cls.DEFAULT_PORT,
+            application_id=application_id,
+            **kwargs
+        )
+
+    @classmethod
+    def from_container(cls, application_id, container):
+        """
+        The service instance connecting to the specified Docker container.
+        """
+
+        raise NotImplementedError("Please override from_container.")
+
+    @classmethod
+    @transient_provider
+    def container(cls, application_id):
+        """
+        A generic container provider for a service. Needs to be specified in
+        'providers' to activate.
+        """
+
+        container = cls.ensure_container(application_id)
+
+        instance = cls.from_container(application_id, container)
+
+        # pylint:disable=attribute-defined-outside-init
+        instance.container_info = container
+        return instance
+
+
+def replace_part(url, **kwargs):
+    """
+    Replace a part of the URL with a new value.
+
+    Keyword arguments can be any properties of urllib.parse.ParseResult.
+    """
+
+    netloc_parts = ('username', 'password', 'hostname', 'port')
+
+    for part, value in kwargs.items():
+        if part in netloc_parts:
+            # Reassemble netloc
+            netloc = {
+                p: getattr(url, p)
+                for p in netloc_parts
+            }
+
+            netloc[part] = value
+
+            netloc_str = netloc['hostname']
+
+            if netloc['port']:
+                netloc_str += ':' + str(netloc['port'])
+            if netloc['username'] or netloc['password']:
+                userinfo = netloc['username'] or ''
+                if netloc['password']:
+                    userinfo += ':' + netloc['password']
+                netloc_str = userinfo + '@' + netloc_str
+
+            kwargs = {'netloc': netloc_str}
+        else:
+            kwargs = {part: value}
+
+        # pylint:disable=protected-access
+        url = url._replace(**kwargs)
+
+    return url
+
+
+class URLDescriptor(object):
+    """
+    A descriptor to get or set an URL part for all the URLs of the class.
+    """
+
+    def __init__(self, part, default='', joiner='|'.join):
+        """
+        Initialise a descriptor to get or set an URL part.
+
+        Parameters:
+            part - the part to get, can be a string or a tuple of (get, set)
+            default - filler for missing parts of the URL, defaults to ''
+            joiner - how to join the parts from the URL array together;
+            defaults to concatenating with '|' in between
+        """
+
+        if isinstance(part, str):
+            self.getter = attrgetter(part)
+            self.setter = lambda url, value: replace_part(url, **{part: value})
+        else:
+            (self.getter, self.setter) = part
+
+        self.default = default
+        self.joiner = joiner
+
+    def __get__(self, instance, owner):
+        """
+        Get the URL part for all URLs in the instance.
+        """
+
+        if instance is None:
+            return self
+
+        return self.joiner(
+            self.getter(url) or self.default
+            for url in instance.urls
+        )
+
+    def __set__(self, instance, value):
+        """
+        Set the URL part for all URLs in the instance.
+        """
+
+        instance.urls = tuple(
+            self.setter(url, value)
+            for url in instance.urls
+        )
+
+
+class URLNameDescriptor(URLDescriptor):
+    """
+    A descriptor to get or set the URL path without a leading slash,
+    commonly used when mapping an alphanumeric namespace (e.g. database names)
+    onto URLs.
+    """
+
+    def __init__(self):
+        super().__init__((
+            lambda url: url.path.lstrip('/'),
+            lambda url, value: replace_part(url, path='/' + value),
+        ))
+
+
+class URLMultiValueDescriptor(URLDescriptor):
+    """
+    A descriptor to get or set part of the URLs to an array of values.
+    """
+
+    def __init__(self, part, default='', joiner=lambda xs: next(iter(xs))):
+        super().__init__(part, default, joiner)
+
+    def __set__(self, instance, value):
+        """
+        Set the URL part to an array of values.
+
+        After setting this, all the URLs will be identical except for hostinfo
+        taken from the (iterable) value assigned. The rest of the URL
+        parameters will be copied from the first one.
+        """
+
+        url = instance.urls[0]
+        instance.urls = tuple(
+            self.setter(url, v)
+            for v in pipe_split(value)
+        )
+
+
+class URLHostInfoDescriptor(URLMultiValueDescriptor):
+    """
+    A descriptor to get or set hostinfo pairs (hostname:port), accounting for
+    default port.
+    """
+
+    def get_hostinfo(self, url):
+        """
+        Get the hostname:port pair of the URL.
+        """
+
+        port = url.port
+        if port == self.default_port or port is None:
+            return url.hostname
+        else:
+            return ':'.join((url.hostname, str(port)))
+
+    def set_hostinfo(self, url, value):
+        """
+        Set the hostname:port pair of the URL.
+        """
+
+        hostname, port = split_host_port(value, self.default_port)
+        return replace_part(url, hostname=hostname, port=port)
+
+    def __init__(self, default_port, joiner=lambda xs: next(iter(xs))):
+        self.default_port = default_port
+        super().__init__(
+            (
+                self.get_hostinfo,
+                self.set_hostinfo,
+            ),
+            joiner=joiner,
+        )
+
+
+class URLService(Service):
+    """
+    A service specified by a set of URLs.
+
+    This is a common 12 factor pattern and should be used instead of inheriting
+    Service directly as much as possible.
+    """
+
+    # These set respective attributes on all the URLs.
+    allow_override = ('user', 'password', 'host', 'port', 'path')
+
+    allow_override_list = ('urls',)
+
+    def __init__(self, urls):
+        self._urls = ()
+        self.urls = urls
+
+        log_service_settings(LOGGER, self, 'urls')
+
+    def url_string(self):
+        """
+        All URLs joined as a string.
+        """
+        return '|'.join(url.geturl() for url in self.urls)
+
+    @property
+    def urls(self):
+        """
+        The array of the URLs the service can be accessed at.
+        """
+
+        return self._urls
+
+    @urls.setter
+    def urls(self, urls):
+        """
+        Set the URLs to access the service at.
+        """
+
+        self._urls = tuple(
+            urllib.parse.urlparse(url) if isinstance(url, str) else url
+            for url in pipe_split(urls)
+        )
+
+    user = URLDescriptor('username')
+    password = URLDescriptor('password')
+    host = hostname = URLMultiValueDescriptor('hostname')
+    port = URLMultiValueDescriptor('port', default=None)
+    path = URLDescriptor('path')
 
 
 class ProviderNotAvailable(Exception):
@@ -333,11 +606,11 @@ def container_name_for(image, application_id):
     return image.replace('/', '_') + '__' + application_id
 
 
-def ensure_container(image,
-                     port,
-                     application_id,
-                     data_dir=None,
-                     **kwargs):
+def _ensure_container(image,
+                      port,
+                      application_id,
+                      data_dir=None,
+                      **kwargs):
     """
     Ensure that a container for an application is running and wait for the port
     to be connectable.
@@ -357,56 +630,56 @@ def ensure_container(image,
             new - True/False to show if the container was created or not
     """
 
-    docker_client = docker.Client()
+    with docker.Client() as docker_client:
 
-    # TODO: better container name
-    container_name = container_name_for(image, application_id)
-    LOGGER.info("Ensuring container for '%s' is started with name '%s'",
-                image, container_name)
+        # TODO: better container name
+        container_name = container_name_for(image, application_id)
+        LOGGER.info("Ensuring container for '%s' is started with name '%s'",
+                    image, container_name)
 
-    if data_dir is not None:
-        cached_dir = cache_directory(container_name)
-    else:
-        cached_dir = None
-
-    try:
-        created, container_status = get_or_create_container(
-            docker_client,
-            container_name,
-            image,
-            port,
-            data_dir,
-            cached_dir,
-            **kwargs
-        )
-
-        if not container_status['State']['Running']:
-            _start_container(docker_client,
-                             container_name,
-                             port,
-                             data_dir,
-                             cached_dir)
-
-        host = docker_client.inspect_container(
-            container_name)['NetworkSettings']['IPAddress']
-        host_port = docker_client.port(container_name, port)[0]['HostPort']
+        if data_dir is not None:
+            cached_dir = cache_directory(container_name)
+        else:
+            cached_dir = None
 
         try:
-            _wait_for_port(image, host_port)
-        except:
-            if created:
-                LOGGER.debug("Could not connect to '%s' container, so "
-                             "destroying it", image)
-                destroy_container(container_name)
-            raise
+            created, container_status = get_or_create_container(
+                docker_client,
+                container_name,
+                image,
+                port,
+                data_dir,
+                cached_dir,
+                **kwargs
+            )
 
-        return ContainerInfo(host=host,
-                             port=port,
-                             data_dir=cached_dir,
-                             name=container_name,
-                             new=created)
-    except requests.exceptions.ConnectionError:
-        raise ProviderNotAvailable("Cannot connect to Docker daemon.")
+            if not container_status['State']['Running']:
+                _start_container(docker_client,
+                                 container_name,
+                                 port,
+                                 data_dir,
+                                 cached_dir)
+
+            host = docker_client.inspect_container(
+                container_name)['NetworkSettings']['IPAddress']
+            host_port = docker_client.port(container_name, port)[0]['HostPort']
+
+            try:
+                _wait_for_port(image, host_port)
+            except:
+                if created:
+                    LOGGER.debug("Could not connect to '%s' container, so "
+                                 "destroying it", image)
+                    destroy_container(container_name)
+                raise
+
+            return ContainerInfo(host=host,
+                                 port=port,
+                                 data_dir=cached_dir,
+                                 name=container_name,
+                                 new=created)
+        except requests.exceptions.ConnectionError:
+            raise ProviderNotAvailable("Cannot connect to Docker daemon.")
 
 
 # pylint:disable=too-many-arguments
@@ -461,9 +734,9 @@ def destroy_container(container_name):
     Stop and remove a container by name
     """
     cache_dir = cache_directory(container_name)
-    docker_client = docker.Client()
-    docker_client.stop(container_name)
-    docker_client.remove_container(container_name)
+    with docker.Client() as docker_client:
+        docker_client.stop(container_name)
+        docker_client.remove_container(container_name)
 
     try:
         rm_tree_root_owned(cache_dir)
@@ -529,11 +802,3 @@ def log_service_settings(logger, service, *attrs):
                 val = val()
 
             logger.debug("%s %s: %s", service.__class__.__name__, attr, val)
-
-
-def transient_provider(func):
-    """
-    Decorator to mark a provider as transient
-    """
-    func.transient = True
-    return func
