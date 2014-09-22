@@ -81,6 +81,7 @@ def pipe_split(value):
 
     if isinstance(value, str):
         value = (value,)
+
     try:
         value = tuple(value)
     except TypeError:
@@ -379,11 +380,13 @@ class URLDescriptor(object):
             joiner - how to join the parts from the URL array together;
             defaults to concatenating with '|' in between
         """
+
         if isinstance(part, str):
             self.getter = attrgetter(part)
             self.setter = lambda url, value: replace_part(url, part, value)
         else:
             (self.getter, self.setter) = part
+
         self.default = default
         self.joiner = joiner
 
@@ -394,6 +397,7 @@ class URLDescriptor(object):
 
         if instance is None:
             return self
+
         return self.joiner(
             self.getter(url) or self.default
             for url in instance.urls
