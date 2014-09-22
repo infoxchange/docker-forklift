@@ -59,6 +59,9 @@ class TestRm(TestCase):
     def setUp(self):
         self.client = docker.Client()
 
+    def tearDown(self):
+        self.client.close()
+
     def test_create_delete(self):
         """
         Make sure the container and data dirs are both created and destroyed

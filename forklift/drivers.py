@@ -307,7 +307,8 @@ class Docker(Driver):
                             stderr=DEVNULL)
             subprocess.check_call(['mkdir', '-p', mount_root])
 
-            driver = docker.Client().inspect_container(container)['Driver']
+            with docker.Client() as client:
+                driver = client.inspect_container(container)['Driver']
             rootfs_path = \
                 '/var/lib/docker/{driver}/mnt/{container}'.format(
                     driver=driver,

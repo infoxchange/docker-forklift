@@ -60,7 +60,8 @@ def docker_image_available(image_name):
     import requests.exceptions
 
     try:
-        docker.Client().inspect_image(image_name)
+        with docker.Client() as client:
+            client.inspect_image(image_name)
         return True
     except (docker.errors.APIError, requests.exceptions.ConnectionError):
         return False

@@ -630,53 +630,53 @@ def _ensure_container(image,
             new - True/False to show if the container was created or not
     """
 
-    docker_client = docker.Client()
+    with docker.Client() as docker_client:
 
-    # TODO: better container name
-    container_name = container_name_for(image, application_id)
-    LOGGER.info("Ensuring container for '%s' is started with name '%s'",
-                image, container_name)
+        # TODO: better container name
+        container_name = container_name_for(image, application_id)
+        LOGGER.info("Ensuring container for '%s' is started with name '%s'",
+                    image, container_name)
 
-    if data_dir is not None:
-        cached_dir = cache_directory(container_name)
-    else:
-        cached_dir = None
-
-    try:
-        created, container_status = get_or_create_container(
-            docker_client,
-            container_name,
-            image,
-            port,
-            data_dir,
-            cached_dir,
-            **kwargs
-        )
-
-        if not container_status['State']['Running']:
-            _start_container(docker_client,
-                             container_name,
-                             port,
-                             data_dir,
-                             cached_dir)
-
-        host_port = docker_client.port(container_name, port)[0]['HostPort']
+        if data_dir is not None:
+            cached_dir = cache_directory(container_name)
+        else:
+            cached_dir = None
 
         try:
-            _wait_for_port(image, host_port)
-        except:
-            if created:
-                LOGGER.debug("Could not connect to '%s' container, so "
-                             "destroying it", image)
-                destroy_container(container_name)
-            raise
+            created, container_status = get_or_create_container(
+                docker_client,
+                container_name,
+                image,
+                port,
+                data_dir,
+                cached_dir,
+                **kwargs
+            )
 
-        return ContainerInfo(port=host_port,
-                             data_dir=cached_dir,
-                             name=container_name,
-                             new=created)
-    except requests.exceptions.ConnectionError:
-        raise ProviderNotAvailable("Cannot connect to Docker daemon.")
+            if not container_status['State']['Running']:
+                _start_container(docker_client,
+                                 container_name,
+                                 port,
+                                 data_dir,
+                                 cached_dir)
+
+            host_port = docker_client.port(container_name, port)[0]['HostPort']
+
+            try:
+                _wait_for_port(image, host_port)
+            except:
+                if created:
+                    LOGGER.debug("Could not connect to '%s' container, so "
+                                 "destroying it", image)
+                    destroy_container(container_name)
+                raise
+
+            return ContainerInfo(port=host_port,
+                                 data_dir=cached_dir,
+                                 name=container_name,
+                                 new=created)
+        except requests.exceptions.ConnectionError:
+            raise ProviderNotAvailable("Cannot connect to Docker daemon.")
 
 
 # pylint:disable=too-many-arguments
@@ -731,9 +731,9 @@ def destroy_container(container_name):
     Stop and remove a container by name
     """
     cache_dir = cache_directory(container_name)
-    docker_client = docker.Client()
-    docker_client.stop(container_name)
-    docker_client.remove_container(container_name)
+    with docker.Client() as docker_client:
+        docker_client.stop(container_name)
+        docker_client.remove_container(container_name)
     rm_tree_root_owned(cache_dir)
 
 
