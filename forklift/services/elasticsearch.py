@@ -153,7 +153,7 @@ class Elasticsearch(URLService):
 
         instance = cls(
             index_name=application_id,
-            urls=('http://{host}:{port}'.format(**container),),
+            urls=('http://{host}:{port}'.format(**container.__dict__),),
         )
         instance.wait_until_available()
         # pylint:disable=attribute-defined-outside-init

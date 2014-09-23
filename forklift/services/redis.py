@@ -99,5 +99,5 @@ class Redis(URLService):
         """
 
         return cls(
-            host='{host}:{port}'.format(**container),
+            host='{host}:{port}'.format(**container.__dict__),
         )
