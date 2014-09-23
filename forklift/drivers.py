@@ -353,6 +353,7 @@ class Docker(Driver):
 
         commands = [
             'DEBIAN_FRONTEND=noninteractive apt-get -qq install dropbear sudo',
+            '(kill $(pidof dropbear) || true)',
         ] + [
             # TODO: this only passes the environment to shells.
             # Commands run directly (ssh ... command) get no environment.
