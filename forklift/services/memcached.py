@@ -103,5 +103,5 @@ class Memcache(URLService):
 
         return cls(
             key_prefix=application_id,
-            hosts=['{host}:{port}'.format(**container)],
+            hosts=['{host}:{port}'.format(**container.__dict__)],
         )
