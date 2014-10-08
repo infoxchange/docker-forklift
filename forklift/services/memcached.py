@@ -18,6 +18,7 @@ Memcache service.
 """
 
 from .base import (
+    ProviderNotAvailable,
     URLHostInfoDescriptor,
     URLNameDescriptor,
     URLService,
@@ -70,21 +71,19 @@ class Memcache(URLService):
             'MEMCACHE_PREFIX': self.key_prefix,
         }
 
-    def available(self):
+    def check_available(self):
         """
         Check whether memcache is available
 
         Do this by connecting to the socket. At least one host must be up
         """
 
-        if not self.hosts:
-            return False
-
         for host in self.hosts:
             if port_open(*split_host_port(host, self.DEFAULT_PORT)):
                 return True
 
-        return False
+        raise ProviderNotAvailable("Memcached not available: none of the hosts"
+                                   " are up")
 
     @classmethod
     def localhost(cls, application_id):
