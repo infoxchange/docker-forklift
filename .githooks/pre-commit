@@ -18,7 +18,7 @@ import re
 
 import shutil
 
-from subprocess import Popen, PIPE, check_call, CalledProcessError
+from subprocess import Popen, PIPE
 
 import sys
 
@@ -33,8 +33,6 @@ _PYLINT_PASS_THRESHOLD = 10
 PEP8_CONF = 'conf/pep8.conf'
 
 PYLINT_CONF = 'conf/pylint.conf'
-
-JSHINT_CONF = 'conf/jshint.conf'
 
 
 def output(command):
@@ -124,26 +122,6 @@ class Main(object):
 
         return ok
 
-    def jshint(self):
-        """
-        Run jshint on the project.
-        Nothing short of perfect will do for this either.
-        """
-
-        jsargs = ('jshint',)
-
-        if os.path.exists(JSHINT_CONF):
-            jsargs += ('-c', JSHINT_CONF)
-
-        try:
-            check_call(jsargs + tuple(self.changed_js_files()))
-        except CalledProcessError:
-            print("JSHint failed")
-            print("Re-run with:\n%s\n" % (' '.join(jsargs),))
-            return False
-
-        return True
-
     def copy_index(self):
         """
         Create a copy of index in a temporary directory.
@@ -188,38 +166,6 @@ class Main(object):
                 [f for f in self.changed_files() if is_py_file(f)]
             return self._changed_py_files
 
-    def changed_js_files(self):
-        """
-        A list of Javascript files changed in the index
-        """
-
-        try:
-            with open('.jshintignore') as file_:
-                ignore = tuple(f.strip() for f in file_.readlines())
-        except IOError:
-            ignore = ()
-
-        def is_js_file(filename):
-            """
-            Determine whether a script is a Javascript file
-            """
-            if not os.path.exists(filename):
-                return False
-            elif filename.startswith(ignore):
-                return False
-            elif filename.endswith('.js'):
-                return True
-            else:
-                return False
-
-        try:
-            return self._changed_js_files
-        except AttributeError:
-            # pylint:disable=attribute-defined-outside-init
-            self._changed_js_files = \
-                [f for f in self.changed_files() if is_js_file(f)]
-            return self._changed_js_files
-
     def modules(self):
         """
         A list of Python modules in the checkout.
@@ -242,13 +188,12 @@ class Main(object):
         Run all the necessary checks.
         """
         if not self.changed_py_files() and \
-           not self.changed_js_files() and \
            not self.force:
             print("No source files changed. Pre-commit tests skipped.")
             return True
         atexit.register(self.cleanup)
         self.copy_index()
-        good = [func() for func in (self.pep8, self.pylint, self.jshint)]
+        good = [func() for func in (self.pep8, self.pylint)]
         if all(good):
             print("Your code looks good. Continuing with commit.")
             return True
