@@ -309,15 +309,18 @@ class Docker(Driver):
 
             with docker.Client() as client:
                 driver = client.inspect_container(container)['Driver']
-            rootfs_path = \
-                '/var/lib/docker/{driver}/mnt/{container}'.format(
-                    driver=driver,
-                    container=container,
-                )
 
-            # AUFS and DeviceMapper use different paths
-            if driver == 'devicemapper':
-                rootfs_path += '/rootfs'
+            # Different drivers use different paths
+            rootfs_rel_path = {
+                'aufs': 'aufs/mnt/{container}',
+                'devicemapper': 'devicemapper/mnt/{container}/rootfs',
+                'btrfs': 'btrfs/subvolumes/{container}',
+            }
+
+            rootfs_path = '/var/lib/docker/' + rootfs_rel_path[driver].format(
+                driver=driver,
+                container=container,
+            )
 
             subprocess.check_call(['sudo', 'mount', '-o', 'bind',
                                    rootfs_path,
