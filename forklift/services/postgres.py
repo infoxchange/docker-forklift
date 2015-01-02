@@ -45,9 +45,7 @@ class PostgreSQL(URLService):
     DEFAULT_PORT = 5432
     URL_SCHEME = 'postgres'
 
-    TEMPORARY_AVAILABILITY_ERRORS = (ProviderNotAvailable,)
-    PERMANENT_AVAILABILITY_ERRORS = (ProviderNotAvailable,
-                                     subprocess.CalledProcessError,
+    PERMANENT_AVAILABILITY_ERRORS = (subprocess.CalledProcessError,
                                      OSError)
 
     allow_override = URLService.allow_override + ('name',)

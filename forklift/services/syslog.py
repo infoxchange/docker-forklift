@@ -17,8 +17,6 @@
 Syslog service.
 """
 
-import socket
-
 from forklift.base import free_port
 from .base import (
     register,
@@ -36,8 +34,6 @@ class Syslog(URLService):
     """
 
     DEFAULT_PORT = 514
-
-    TEMPORARY_AVAILABILITY_ERRORS = (socket.error,)
 
     allow_override = ('host', 'port', 'proto')
 

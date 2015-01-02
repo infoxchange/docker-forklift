@@ -18,7 +18,6 @@ Redis service
 """
 
 import logging
-import socket
 from telnetlib import Telnet
 
 from .base import (
@@ -46,8 +45,6 @@ class Redis(URLService):
     CONTAINER_IMAGE = 'dockerfile/redis'
 
     DEFAULT_PORT = 6379
-
-    TEMPORARY_AVAILABILITY_ERRORS = (socket.error,)
 
     def __init__(self, host, db_index=0):
         # FIXME: we don't support multiple redis servers yet

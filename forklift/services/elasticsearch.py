@@ -21,7 +21,6 @@ import json
 import http.client
 import logging
 import os
-import socket
 import urllib.parse
 import urllib.request
 
@@ -63,11 +62,12 @@ class Elasticsearch(URLService):
 
     index_name = URLNameDescriptor()
 
-    TEMPORARY_AVAILABILITY_ERRORS = (CONNECTION_ISSUES_ERROR,
-                                     http.client.HTTPException,
-                                     ProviderNotAvailable,
-                                     socket.error,
-                                     ValueError)
+    TEMPORARY_AVAILABILITY_ERRORS = \
+        URLService.TEMPORARY_AVAILABILITY_ERRORS + (
+            CONNECTION_ISSUES_ERROR,
+            http.client.HTTPException,
+            ValueError
+        )
     PERMANENT_AVAILABILITY_ERRORS = (urllib.request.URLError,)
 
     def __init__(self, index_name, urls):
