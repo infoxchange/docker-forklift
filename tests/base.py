@@ -102,10 +102,8 @@ class TestService(forklift.services.Service):
     allow_override = ('host', 'one', 'two')
     allow_override_list = ('list',)
 
-    is_available = True
-
-    def available(self):
-        return self.is_available
+    def check_available(self):
+        return True
 
     def environment(self):
         return {
