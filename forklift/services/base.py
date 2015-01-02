@@ -102,6 +102,49 @@ def transient_provider(func):
     return func
 
 
+class ProviderNotAvailable(Exception):
+    """
+    A service provider is not available.
+    """
+
+    pass
+
+
+class DependencyRequired(ProviderNotAvailable):
+    """
+    A dependency is required to make a provider available.
+    """
+
+    def __init__(self, message, command=None):
+        super().__init__(message)
+        self.command = command
+
+
+class DockerImageRequired(DependencyRequired):
+    """
+    A Docker image is required to make a provider available.
+    """
+
+    def __init__(self, image):
+        super().__init__(
+            message="Docker image {0} is required.".format(image),
+            command='docker pull {0}'.format(image),
+        )
+
+
+class ContainerRefusingConnection(ProviderNotAvailable):
+    """
+    A Docker container that was started is not connectable after a period of
+    time.
+    """
+
+    def __init__(self, image, port):
+        super().__init__(
+            message=("Docker container {0} was started but couldn't connect on"
+                     "port {1}").format(image, port)
+        )
+
+
 class Service(object):
     """
     Base class for services required by the application.
@@ -118,18 +161,11 @@ class Service(object):
     # (i.e. hosts, urls)
     allow_override_list = ()
 
-    TEMPORARY_AVAILABILITY_ERRORS = ()
+    TEMPORARY_AVAILABILITY_ERRORS = (
+        ProviderNotAvailable,
+        socket.error,
+    )
     PERMANENT_AVAILABILITY_ERRORS = ()
-
-    # invalid-name disabled to allow it to conform with other availability
-    # areas constants
-    @property
-    def AVAILABILITY_ERRORS(self):  # pylint:disable=invalid-name
-        """
-        Combine all availability errors
-        """
-        return (self.TEMPORARY_AVAILABILITY_ERRORS +
-                self.PERMANENT_AVAILABILITY_ERRORS)
 
     CONTAINER_IMAGE = None
     DEFAULT_PORT = None
@@ -213,7 +249,9 @@ class Service(object):
         """
         try:
             return self.check_available()
-        except self.AVAILABILITY_ERRORS:
+        except self.TEMPORARY_AVAILABILITY_ERRORS:
+            return False
+        except self.PERMANENT_AVAILABILITY_ERRORS:
             return False
 
     def check_available(self):
@@ -532,49 +570,6 @@ class URLService(Service):
     host = hostname = URLMultiValueDescriptor('hostname')
     port = URLMultiValueDescriptor('port', default=None)
     path = URLDescriptor('path')
-
-
-class ProviderNotAvailable(Exception):
-    """
-    A service provider is not available.
-    """
-
-    pass
-
-
-class DependencyRequired(ProviderNotAvailable):
-    """
-    A dependency is required to make a provider available.
-    """
-
-    def __init__(self, message, command=None):
-        super().__init__(message)
-        self.command = command
-
-
-class DockerImageRequired(DependencyRequired):
-    """
-    A Docker image is required to make a provider available.
-    """
-
-    def __init__(self, image):
-        super().__init__(
-            message="Docker image {0} is required.".format(image),
-            command='docker pull {0}'.format(image),
-        )
-
-
-class ContainerRefusingConnection(ProviderNotAvailable):
-    """
-    A Docker container that was started is not connectable after a period of
-    time.
-    """
-
-    def __init__(self, image, port):
-        super().__init__(
-            message=("Docker container {0} was started but couldn't connect on"
-                     "port {1}").format(image, port)
-        )
 
 
 ContainerInfo = namedtuple('ContainerInfo', ['host',

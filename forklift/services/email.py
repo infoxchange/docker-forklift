@@ -17,8 +17,6 @@
 Proxy service.
 """
 
-import socket
-
 from forklift.base import free_port
 from .base import register, transient_provider, try_port, URLService
 
@@ -28,8 +26,6 @@ class Email(URLService):
     """
     An MTA for the application.
     """
-
-    TEMPORARY_AVAILABILITY_ERRORS = (socket.error,)
 
     allow_override = ('host', 'port')
 
