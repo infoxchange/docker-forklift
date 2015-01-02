@@ -222,7 +222,9 @@ class Forklift(object):
         Get the README file as a stream.
         """
 
+        # pylint:disable=no-name-in-module,import-error
         from pkg_resources import resource_stream
+        # pylint:enable=no-name-in-module,import-error
         return resource_stream(__name__, 'README.md')
 
     def help(self):

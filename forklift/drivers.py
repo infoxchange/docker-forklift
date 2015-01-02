@@ -355,6 +355,7 @@ class Docker(Driver):
                 ssh_key = id_file.read().strip()
 
         commands = [
+            'DEBIAN_FRONTEND=noninteractive apt-get -qq update',
             'DEBIAN_FRONTEND=noninteractive apt-get -qq install dropbear sudo',
             '(kill $(pidof dropbear) || true)',
         ] + [
