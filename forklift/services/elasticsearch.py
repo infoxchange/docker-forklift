@@ -123,6 +123,26 @@ class Elasticsearch(URLService):
                    urls=('http://localhost:9200',))
 
     @classmethod
+    def ensure_container(cls, application_id, **kwargs):
+        """
+        Ensure an Elasticsearch container.
+        """
+
+        kwargs.setdefault('data_dir', '/data')
+        return super().ensure_container(application_id, **kwargs)
+
+    @classmethod
+    def from_container(cls, application_id, container):
+        """
+        The Elasticsearch service provided by the container.
+        """
+
+        return cls(
+            index_name=application_id,
+            urls=('http://{host}:{port}'.format(**container.__dict__),),
+        )
+
+    @classmethod
     @transient_provider
     def container(cls, application_id):
         """
@@ -149,13 +169,4 @@ class Elasticsearch(URLService):
                 file=config,
             )
 
-        container = cls.ensure_container(application_id, data_dir='/data')
-
-        instance = cls(
-            index_name=application_id,
-            urls=('http://{host}:{port}'.format(**container.__dict__),),
-        )
-        instance.wait_until_available()
-        # pylint:disable=attribute-defined-outside-init
-        instance.container_info = container
-        return instance
+        return super().container(application_id)

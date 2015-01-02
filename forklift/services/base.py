@@ -353,6 +353,7 @@ class Service(object):
         container = cls.ensure_container(application_id)
 
         instance = cls.from_container(application_id, container)
+        instance.wait_until_available()
 
         # pylint:disable=attribute-defined-outside-init
         instance.container_info = container

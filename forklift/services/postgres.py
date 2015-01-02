@@ -26,8 +26,7 @@ from forklift.base import DEVNULL
 from .base import (ProviderNotAvailable,
                    URLNameDescriptor,
                    URLService,
-                   register,
-                   transient_provider)
+                   register)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -149,35 +148,35 @@ class PostgreSQL(URLService):
         )
 
     @classmethod
-    @transient_provider
-    def container(cls, application_id):
+    def ensure_container(cls, application_id, **kwargs):
+        """
+        Pass custom environment to a PostgreSQL container.
+        """
+
+        db_name = re.sub(r'[^a-zA-Z0-9_]', '_', application_id)
+
+        kwargs.setdefault('environment', {}).update({
+            'DB': db_name,
+            'PASS': 'forklift',
+        })
+
+        return super().ensure_container(application_id, **kwargs)
+
+    @classmethod
+    def from_container(cls, application_id, container):
         """
         PostgreSQL provided by a container.
         """
 
         db_name = re.sub(r'[^a-zA-Z0-9_]', '_', application_id)
 
-        container = cls.ensure_container(
-            application_id,
-            # FIXME: this is broken at the moment in the paintedfox container
-            # data_dir='/data',
-            environment={
-                'DB': db_name,
-                'PASS': 'forklift',
-            }
-        )
-
-        instance = cls(
+        return cls(
             host=container.host,
             port=container.port,
             name=db_name,
             user='super',
             password='forklift',
         )
-        instance.wait_until_available()
-        # pylint:disable=attribute-defined-outside-init
-        instance.container_info = container
-        return instance
 
     providers = ('localhost', 'container')
 
