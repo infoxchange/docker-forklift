@@ -67,8 +67,9 @@ class RabbitMQ(URLService):
     @classmethod
     def localhost(cls, application_id):
         """RabbitMQ on the local machine"""
-        return cls(urls=('amqp://localhost:{port}//'.format(
-            port=cls.DEFAULT_PORT),))
+        return cls(urls=('amqp://localhost:{port}/{vhost}/'.format(
+            port=cls.DEFAULT_PORT,
+            vhost=application_id),))
 
     @classmethod
     def from_container(cls, application_id, container):
