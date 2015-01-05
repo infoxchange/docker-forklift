@@ -256,7 +256,7 @@ class MockLogger(object):
     def __init__(self):
         self.logs = {}
 
-    # pylint:disable=missing-docstring, invalid-name, unused-argument
+    # pylint:disable=missing-docstring, invalid-name
     def isEnabledFor(self, *args):
         return True
 

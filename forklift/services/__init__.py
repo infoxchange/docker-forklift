@@ -27,3 +27,4 @@ from .postgres import PostgreSQL, PostGIS
 from .proxy import Proxy
 from .syslog import Syslog
 from .redis import Redis
+from .amqp import RabbitMQ

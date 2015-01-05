@@ -61,7 +61,6 @@ class Driver(object):
         self.added_environment = environment
         self.conf = conf
 
-    # pylint:disable=unused-argument
     @staticmethod
     def valid_target(target):
         """

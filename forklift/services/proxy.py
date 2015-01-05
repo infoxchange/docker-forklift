@@ -54,7 +54,6 @@ class Proxy(URLService):
         else:
             return {}
 
-    # pylint:disable=unused-argument
     @classmethod
     @transient_provider
     def manual(cls, application_id):

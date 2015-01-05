@@ -71,6 +71,7 @@ comment=no
 # --disable=W"
 disable=
     abstract-method,
+    duplicate-code,
     fixme,
     locally-disabled,
     locally-enabled,
@@ -79,6 +80,7 @@ disable=
     super-on-old-class,
     too-few-public-methods,
     too-many-public-methods,
+    unused-argument,
     RP0101,
     RP0401,
     RP0402,
