@@ -73,7 +73,6 @@ class Syslog(URLService):
         else:
             return try_port(self.host, self.port)
 
-    # pylint:disable=unused-argument
     @classmethod
     def manual(cls, application_id):
         """
@@ -83,7 +82,6 @@ class Syslog(URLService):
 
         return cls()
 
-    # pylint:disable=unused-argument
     @classmethod
     @transient_provider
     def stdout(cls, application_id):

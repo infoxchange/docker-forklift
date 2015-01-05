@@ -80,7 +80,7 @@ class ServiceTestCase(unittest.TestCase):
         service.cleanup()
 
 
-def load_tests(loader, tests, pattern):  # pylint:disable=unused-argument
+def load_tests(loader, tests, pattern):
     """
     Generate a test class for each service.
     """

@@ -54,7 +54,6 @@ class Email(URLService):
 
         return try_port(self.host, self.port)
 
-    # pylint:disable=unused-argument
     @classmethod
     def localhost(cls, application_id):
         """
@@ -62,7 +61,6 @@ class Email(URLService):
         """
         return cls(host='localhost')
 
-    # pylint:disable=unused-argument
     @classmethod
     @transient_provider
     def stdout(cls, application_id):

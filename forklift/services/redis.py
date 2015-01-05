@@ -80,7 +80,6 @@ class Redis(URLService):
 
         return True
 
-    # pylint:disable=unused-argument
     @classmethod
     def localhost(cls, application_id):
         """
