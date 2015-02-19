@@ -314,6 +314,7 @@ class Docker(Driver):
                 'aufs': 'aufs/mnt/{container}',
                 'devicemapper': 'devicemapper/mnt/{container}/rootfs',
                 'btrfs': 'btrfs/subvolumes/{container}',
+                'overlay': 'overlay/{container}/merged',
             }
 
             rootfs_path = '/var/lib/docker/' + rootfs_rel_path[driver].format(
