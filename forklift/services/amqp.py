@@ -37,7 +37,7 @@ class RabbitMQ(URLService):
     """
     A RabbitMQ/AMQP service
     """
-    CONTAINER_IMAGE = 'dockerfile/rabbitmq'
+    CONTAINER_IMAGE = 'rabbitmq'
     DEFAULT_PORT = 5672
 
     hosts = URLHostInfoDescriptor(default_port=DEFAULT_PORT, joiner=tuple)
