@@ -298,7 +298,7 @@ def parse_environment(env_string):
     Parse the output of 'env -0' into a dictionary.
     """
 
-    if type(env_string) is bytes:
+    if isinstance(env_string, bytes):
         env_string = env_string.decode()
 
     return dict(
