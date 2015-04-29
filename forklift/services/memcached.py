@@ -36,7 +36,7 @@ class Memcache(URLService):
 
     DEFAULT_PORT = 11211
 
-    CONTAINER_IMAGE = 'fedora/memcached'
+    CONTAINER_IMAGE = 'memcached'
 
     allow_override = URLService.allow_override + ('key_prefix',)
     allow_override_list = URLService.allow_override_list + ('hosts',)

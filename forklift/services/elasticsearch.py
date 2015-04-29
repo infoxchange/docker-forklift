@@ -56,7 +56,7 @@ class Elasticsearch(URLService):
 
     providers = ('localhost', 'container')
 
-    CONTAINER_IMAGE = 'dockerfile/elasticsearch'
+    CONTAINER_IMAGE = 'elasticsearch'
 
     DEFAULT_PORT = 9200
 
