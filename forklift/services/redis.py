@@ -42,7 +42,7 @@ class Redis(URLService):
 
     providers = ('localhost', 'container')
 
-    CONTAINER_IMAGE = 'dockerfile/redis'
+    CONTAINER_IMAGE = 'redis'
 
     DEFAULT_PORT = 6379
 
