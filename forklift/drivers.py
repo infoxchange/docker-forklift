@@ -19,6 +19,7 @@ Drivers that can execute applications.
 
 
 import fcntl
+import logging
 import os
 import pwd
 import re
@@ -44,6 +45,8 @@ from forklift.registry import Registry
 
 
 register = Registry()  # pylint:disable=invalid-name
+
+LOGGER = logging.getLogger(__name__)
 
 
 class Driver(object):
@@ -91,6 +94,7 @@ class Driver(object):
         When the parent process finishes, we return (in the child process) so
         that the main code path can complete
         """
+
         child_pid = os.fork()
         if child_pid:
             os.execvp(command[0], command)
@@ -290,6 +294,12 @@ class Docker(Driver):
             ]
         docker_command += [self.target]
         docker_command += command
+
+        if docker_command:
+            LOGGER.debug(
+                'docker command:\n%s',
+                ' '.join(docker_command).replace('&&', '&& \\ \n')
+            )
 
         return docker_command
 
