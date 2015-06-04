@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/infoxchange/docker-forklift.svg?branch=master)](https://travis-ci.org/infoxchange/docker-forklift)
+
 Forklift - when you need to handle just one container
 =====================================================
 
