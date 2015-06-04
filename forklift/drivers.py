@@ -297,8 +297,8 @@ class Docker(Driver):
 
         if docker_command:
             LOGGER.debug(
-                "docker command:\n{%s}",
-                ' '.join(docker_command).replace('&&', "&& \\ \n")
+                'docker command:\n%s',
+                ' '.join(docker_command).replace('&&', '&& \\ \n')
             )
 
         return docker_command
