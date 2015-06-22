@@ -717,7 +717,7 @@ def get_or_create_container(docker_client,
         docker_client.create_container(
             image,
             name=container_name,
-            ports=(port,),
+            ports={port: {}},
             **kwargs
         )
         container_status = docker_client.inspect_container(container_name)
