@@ -17,6 +17,8 @@
 Test the --rm and --transient flags
 """
 
+import re
+
 import docker
 import docker.errors
 
@@ -102,7 +104,7 @@ class TestRm(TestCase):
 
         ex = ex.exception
         self.assertEqual(ex.response.status_code, 404)
-        self.assertRegex(ex.explanation, b'No such container')
+        self.assertRegex(ex.explanation, re.compile(b'no such', re.IGNORECASE))
 
 
 class TestTransient(TestCase):
