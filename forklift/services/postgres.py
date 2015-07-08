@@ -19,7 +19,6 @@ PostgreSQL database service.
 
 import logging
 import os
-import re
 import subprocess
 
 from forklift.base import DEVNULL
@@ -39,7 +38,7 @@ class PostgreSQL(URLService):
     """
 
     CHECK_COMMAND = 'select version()'
-    CONTAINER_IMAGE = 'paintedfox/postgresql'
+    CONTAINER_IMAGE = 'postgres'
     DATABASE_NAME = 'DEFAULT'
     DEFAULT_PORT = 5432
     URL_SCHEME = 'postgres'
@@ -153,11 +152,8 @@ class PostgreSQL(URLService):
         Pass custom environment to a PostgreSQL container.
         """
 
-        db_name = re.sub(r'[^a-zA-Z0-9_]', '_', application_id)
-
         kwargs.setdefault('environment', {}).update({
-            'DB': db_name,
-            'PASS': 'forklift',
+            'POSTGRES_PASSWORD': 'forklift',
         })
 
         return super().ensure_container(application_id, **kwargs)
@@ -168,13 +164,11 @@ class PostgreSQL(URLService):
         PostgreSQL provided by a container.
         """
 
-        db_name = re.sub(r'[^a-zA-Z0-9_]', '_', application_id)
-
         return cls(
             host=container.host,
             port=container.port,
-            name=db_name,
-            user='super',
+            name='postgres',
+            user='postgres',
             password='forklift',
         )
 
@@ -189,7 +183,7 @@ class PostGIS(PostgreSQL):
 
     CHECK_COMMAND = """CREATE EXTENSION IF NOT EXISTS postgis;
                        SELECT PostGIS_full_version()"""
-    CONTAINER_IMAGE = 'thatpanda/postgis'
+    CONTAINER_IMAGE = 'mdillon/postgis'
     URL_SCHEME = 'postgis'
 
     providers = ('localhost', 'container')
