@@ -72,8 +72,10 @@ port locally.
 * `interactive`: Run containers in interactive mode (`-i -t`).
 * `storage`: Run the container with `/storage` mounted as a volume under the
 specified path.
+* `detach`: Run detached (`-d`).
 * `mount-root`: Bind mount the root directory of the container filesystem to
-the specified path.
+the specified path (for *reasons* `mount-root` is only supported with
+  `detach` or SSH daemon mode).
 
 ### SSH daemon mode
 
