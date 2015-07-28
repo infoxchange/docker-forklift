@@ -212,6 +212,8 @@ class Docker(Driver):
                      help="The UID for the user inside the container")
         add_argument('--identity',
                      help="The public key to authorise logging in as")
+        add_argument('--detach', default=False, action='store_true',
+                     help="Detach docker container from terminal")
 
     def run(self, *command):
         """
@@ -236,6 +238,14 @@ class Docker(Driver):
 
         if list(command) == ['sshd']:
             return self.run_sshd()
+        elif self.conf.detach:
+            command = self.docker_command(*command)
+            container = subprocess.check_output(command).decode().strip()
+            self.mount_root(container)
+
+            print("Running as %s" % container)
+            print("docker exec -t -i %s bash" % container)
+            return 0
         else:
             command = self.docker_command(*command)
             return self._run(command)
@@ -264,6 +274,9 @@ class Docker(Driver):
 
         if self.conf.rm:
             docker_command += ['--rm']
+
+        if self.conf.detach:
+            docker_command += ['-d']
 
         if use_sshd:
             docker_command += [
