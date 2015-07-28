@@ -327,6 +327,30 @@ class Docker(Driver):
                 'overlay': 'overlay/{container}/merged',
             }
 
+            if driver == 'devicemapper':
+                # we need to actually mount the devicemapper device
+                # using the correct security context
+                #
+                # Derive the path of the DM device
+                pool_name = dict(client.info()['DriverStatus'])['Pool Name']
+                mapper_path = '/dev/mapper/' + pool_name[:-4] + container
+
+                # Somewhere to mount the container. It doesn't actually matter
+                # it just needs to align with rootfs_rel_path above.
+                container_path = \
+                    '/var/lib/docker/devicemapper/mnt/{container}/'.format(
+                        container=container,
+                    )
+
+                # The SELinux security context
+                context = client.inspect_container(container)['MountLabel']
+
+                # Mount the DM device
+                subprocess.check_call(['sudo', 'mount', '-o',
+                                       'context="%s"' % context,
+                                       mapper_path,
+                                       container_path])
+
             rootfs_path = '/var/lib/docker/' + rootfs_rel_path[driver].format(
                 driver=driver,
                 container=container,
@@ -337,6 +361,10 @@ class Docker(Driver):
                                    mount_root])
             print("Container filesystem mounted on {mount_root}".format(
                 mount_root=mount_root))
+
+            if driver == 'devicemapper':
+                # clean up after ourselves
+                subprocess.check_call(['sudo', 'umount', container_path])
 
     def run_sshd(self):
         """
