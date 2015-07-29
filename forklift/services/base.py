@@ -712,7 +712,7 @@ def get_or_create_container(docker_client,
 
         if data_dir is not None:
             # Ensure the data volume is mounted
-            kwargs.setdefault('volumes', {})[data_dir] = cached_dir
+            kwargs.setdefault('volumes', {})[data_dir] = {}
 
         docker_client.create_container(
             image,
