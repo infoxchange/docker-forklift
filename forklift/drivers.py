@@ -329,7 +329,7 @@ class Docker(Driver):
                             stderr=DEVNULL)
             subprocess.check_call(['mkdir', '-p', mount_root])
 
-            with docker.Client() as client:
+            with docker.Client(version='auto') as client:
                 driver = client.inspect_container(container)['Driver']
 
             # Different drivers use different paths
@@ -464,7 +464,7 @@ class Docker(Driver):
         succeeded.
         """
 
-        with docker.Client() as docker_client:
+        with docker.Client(version='auto') as docker_client:
             ssh_port = docker_client.port(container, 22)[0]['HostPort']
 
         ssh_command = [
