@@ -730,7 +730,7 @@ def destroy_container(container_name):
     Stop and remove a container by name
     """
     cache_dir = cache_directory(container_name)
-    with docker.Client() as docker_client:
+    with docker.Client(version='auto') as docker_client:
         docker_client.stop(container_name)
         docker_client.remove_container(container_name)
 
