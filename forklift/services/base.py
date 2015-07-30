@@ -626,7 +626,7 @@ def _ensure_container(image,
             new - True/False to show if the container was created or not
     """
 
-    with docker.Client() as docker_client:
+    with docker.Client(version='auto') as docker_client:
 
         # TODO: better container name
         container_name = container_name_for(image, application_id)
