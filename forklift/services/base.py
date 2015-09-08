@@ -140,8 +140,8 @@ class ContainerRefusingConnection(ProviderNotAvailable):
 
     def __init__(self, image, port):
         super().__init__(
-            message=("Docker container {0} was started but couldn't connect on"
-                     "port {1}").format(image, port)
+            "Docker container {0} was started but couldn't connect on"
+            "port {1}".format(image, port)
         )
 
 
