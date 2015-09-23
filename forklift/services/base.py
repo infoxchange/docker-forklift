@@ -670,12 +670,12 @@ def _ensure_container(image,
                     destroy_container(container_name)
                 raise
 
-            if not host or host == '0.0.0.0':
+            if not host:
                 host = docker_client.inspect_container(
                     container_name)['NetworkSettings']['IPAddress']
 
             return ContainerInfo(host=host,
-                                 port=port,
+                                 port=host_port,
                                  data_dir=cached_dir,
                                  name=container_name,
                                  new=created)
