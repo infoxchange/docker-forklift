@@ -656,20 +656,23 @@ def _ensure_container(image,
                                  data_dir,
                                  cached_dir)
 
-            host = docker_client.inspect_container(
-                container_name)['NetworkSettings']['IPAddress']
             port_info = docker_client.port(container_name, port)[0]
-            host_ip = port_info['HostIp'] or '127.0.0.1'
+            host = port_info['HostIp']
+
             host_port = port_info['HostPort']
 
             try:
-                _wait_for_port(image, host_ip, host_port)
+                _wait_for_port(image, host, host_port)
             except:
                 if created:
                     LOGGER.debug("Could not connect to '%s' container, so "
                                  "destroying it", image)
                     destroy_container(container_name)
                 raise
+
+            if not host or host == '0.0.0.0':
+                host = docker_client.inspect_container(
+                    container_name)['NetworkSettings']['IPAddress']
 
             return ContainerInfo(host=host,
                                  port=port,
