@@ -658,10 +658,12 @@ def _ensure_container(image,
 
             host = docker_client.inspect_container(
                 container_name)['NetworkSettings']['IPAddress']
-            host_port = docker_client.port(container_name, port)[0]['HostPort']
+            port_info = docker_client.port(container_name, port)[0]
+            host_ip = port_info['HostIp'] or '127.0.0.1'
+            host_port = port_info['HostPort']
 
             try:
-                _wait_for_port(image, host_port)
+                _wait_for_port(image, host_ip, host_port)
             except:
                 if created:
                     LOGGER.debug("Could not connect to '%s' container, so "
@@ -740,18 +742,20 @@ def destroy_container(container_name):
         pass
 
 
-def _wait_for_port(image, port, retries=30):
+def _wait_for_port(image, host, port, retries=30):
     """
     Wait for a port to become available, or raise ContainerRefusingConnection
     error
 
     Parameters:
         image - the image that the container is run from
+        host - the host/IP to check
         port - the port to wait for
         retries - number of times to retry before giving up
     """
-    LOGGER.debug("Waiting for '%s' port %s to be reachable", image, port)
-    if not wait_for(lambda: port_open('127.0.0.1', port), retries=retries):
+    LOGGER.debug("Waiting for '%s' at %s:%s to be reachable", image, host,
+                 port)
+    if not wait_for(lambda: port_open(host, port), retries=retries):
         raise ContainerRefusingConnection(image, port)
 
 
