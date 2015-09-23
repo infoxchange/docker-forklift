@@ -50,7 +50,7 @@ def assertion_forklift_class(func):
     return InnerClass
 
 
-@requires_docker_image('thatpanda/postgis')
+@requires_docker_image('mdillon/postgis')
 class TestRm(TestCase):
     """
     Test the --rm flag
