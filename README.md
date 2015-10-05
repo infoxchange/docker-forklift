@@ -11,7 +11,7 @@ and/or specified in the codebase.
 
 Furthermore, it is often necessary to experiment within a running container.
 Forklift includes a special 'sshd' mode to start the SSH daemon instead of the
-original command, so that one can run arbitary commands inside.
+original command, so that one can run arbitrary commands inside.
 
 Installation
 ------------
