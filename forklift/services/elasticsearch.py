@@ -104,7 +104,7 @@ class Elasticsearch(URLService):
             url = replace_part(url, path='')
             es_response = urllib.request.urlopen(url.geturl())
             es_status = json.loads(es_response.read().decode())
-            if es_status['status'] != 200:
+            if es_status.get('status', es_response.status) != 200:
                 raise ProviderNotAvailable(
                     ("Provider '{}' is not yet available: HTTP response "
                      "{}\n{}").format(self.__class__.__name__,
