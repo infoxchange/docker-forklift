@@ -24,9 +24,9 @@ import sys
 import subprocess
 import tempfile
 import unittest
-
 from functools import reduce
 try:
+    # pylint:disable=ungrouped-imports
     from subprocess import DEVNULL  # pylint:disable=no-name-in-module
 except ImportError:
     DEVNULL = open(os.devnull)
