@@ -17,8 +17,9 @@
 Setup script.
 """
 
-from setuptools import setup, find_packages
 from sys import version_info
+
+from setuptools import setup, find_packages
 
 assert version_info >= (3,), "Python 3 is required."
 

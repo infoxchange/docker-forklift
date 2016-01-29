@@ -22,7 +22,6 @@ user to log on to it.
 import argparse
 import logging
 import os
-import pkg_resources
 import pwd
 import socket
 import subprocess
@@ -35,7 +34,7 @@ from distutils.spawn import find_executable
 # pylint:enable=no-name-in-module,import-error
 
 from xdg.BaseDirectory import xdg_config_home
-
+import pkg_resources
 
 from forklift.arguments import argument_factory, convert_to_args, project_args
 from forklift.base import DEVNULL, ImproperlyConfigured

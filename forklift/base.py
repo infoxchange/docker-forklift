@@ -17,6 +17,7 @@
 Common declarations.
 """
 
+from contextlib import contextmanager
 import os
 import socket
 import subprocess
@@ -24,8 +25,6 @@ import tempfile
 import time
 
 import psutil
-
-from contextlib import contextmanager
 
 
 def free_port():
