@@ -27,7 +27,7 @@ with open('requirements.txt') as requirements, \
         open('test_requirements.txt') as test_requirements:
     setup(
         name='docker-forklift',
-        version='0.2.51',
+        version='0.2.52',
         description='Utility for running a container',
         author='Infoxchange Australia development team',
         author_email='devs@infoxchange.net.au',
